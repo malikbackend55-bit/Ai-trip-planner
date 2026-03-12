@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
-import 'core/theme.dart';
-import 'widgets/dashboard_layout.dart';
-import 'features/dashboard/overview_view.dart';
-import 'features/dashboard/trips_view.dart';
-import 'features/dashboard/users_view.dart';
-import 'features/analytics/analytics_view.dart';
-import 'features/settings/settings_view.dart';
+import 'package:provider/provider.dart';
+import 'core/dashboard_provider.dart';
 
 void main() {
-  runApp(const AitpDashboardApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
+      ],
+      child: const AitpDashboardApp(),
+    ),
+  );
 }
 
 class AitpDashboardApp extends StatelessWidget {

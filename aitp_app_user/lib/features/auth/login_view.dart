@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme.dart';
 import 'register_view.dart';
+import 'package:provider/provider.dart';
+import '../../core/auth_provider.dart';
 import '../main_navigation.dart';
 
 class LoginView extends StatefulWidget {
@@ -134,8 +136,9 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
     return Column(
       children: [
         _buildTextField('Email Address', Icons.email_outlined),
+        _buildTextField('Email Address', Icons.email_outlined, controller: _emailController), // Pass controller
         const SizedBox(height: 16),
-        _buildTextField('Password', Icons.lock_outline, isPassword: true),
+        _buildTextField('Password', Icons.lock_outline, isPassword: true, controller: _passwordController), // Pass controller
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
@@ -145,9 +148,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
         ),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: () {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainNavigation()));
-          },
+          onPressed: _handleLogin, // Call _handleLogin
           child: const Text('Login'),
         ),
         const SizedBox(height: 24),

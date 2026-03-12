@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme.dart';
+import 'package:provider/provider.dart';
+import '../../core/auth_provider.dart';
 import '../main_navigation.dart';
 
 class RegisterView extends StatefulWidget {
@@ -100,18 +102,16 @@ class _RegisterViewState extends State<RegisterView> with SingleTickerProviderSt
   Widget _buildForm() {
     return Column(
       children: [
-        _buildTextField('Full Name', Icons.person_outline),
+        _buildTextField('Full Name', Icons.person_outline, controller: _nameController),
         const SizedBox(height: 16),
-        _buildTextField('Email Address', Icons.email_outlined),
+        _buildTextField('Email Address', Icons.email_outlined, controller: _emailController),
         const SizedBox(height: 16),
-        _buildTextField('Password', Icons.lock_outline, isPassword: true),
+        _buildTextField('Password', Icons.lock_outline, isPassword: true, controller: _passwordController),
         const SizedBox(height: 24),
         _buildTerms(),
         const SizedBox(height: 32),
         ElevatedButton(
-          onPressed: () {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainNavigation()));
-          },
+          onPressed: _handleRegister,
           child: const Text('Create Account'),
         ),
         const SizedBox(height: 32),

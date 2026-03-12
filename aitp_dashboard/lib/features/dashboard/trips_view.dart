@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/dashboard_provider.dart';
 import '../../core/theme.dart';
 
 class TripsView extends StatelessWidget {
@@ -6,6 +7,8 @@ class TripsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<DashboardProvider>(context);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -16,6 +19,8 @@ class TripsView extends StatelessWidget {
               'Trip Management',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textMain),
             ),
+            if (provider.isLoading)
+              const CircularProgressIndicator(),
             ElevatedButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.add, size: 18),
@@ -30,7 +35,7 @@ class TripsView extends StatelessWidget {
         const SizedBox(height: 24),
         _buildFilters(),
         const SizedBox(height: 24),
-        _buildTripsTable(),
+        _buildTripsTable(provider),
       ],
     );
   }
@@ -80,7 +85,9 @@ class TripsView extends StatelessWidget {
     );
   }
 
-  Widget _buildTripsTable() {
+  Widget _buildTripsTable(DashboardProvider provider) {
+    final trips = provider.trips;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -88,34 +95,38 @@ class TripsView extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      child: DataTable(
-        headingRowHeight: 56,
-        dataRowMinHeight: 56,
-        dataRowMaxHeight: 64,
-        horizontalMargin: 24,
-        columnSpacing: 24,
-        headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain, fontSize: 13),
-        columns: const [
-          DataColumn(label: Text('Destination')),
-          DataColumn(label: Text('Travel Dates')),
-          DataColumn(label: Text('User')),
-          DataColumn(label: Text('Budget')),
-          DataColumn(label: Text('Status')),
-          DataColumn(label: Text('Actions')),
-        ],
-        rows: List.generate(8, (index) => _buildTripRow(index)),
-      ),
+      child: provider.isLoading 
+        ? const Padding(
+            padding: EdgeInsets.all(64.0),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        : SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowHeight: 56,
+              dataRowMinHeight: 56,
+              dataRowMaxHeight: 64,
+              horizontalMargin: 24,
+              columnSpacing: 24,
+              headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain, fontSize: 13),
+              columns: const [
+                DataColumn(label: Text('Destination')),
+                DataColumn(label: Text('Travel Dates')),
+                DataColumn(label: Text('Budget')),
+                DataColumn(label: Text('Status')),
+                DataColumn(label: Text('Actions')),
+              ],
+              rows: trips.map((t) => _buildTripRow(t)).toList(),
+            ),
+          ),
     );
   }
 
-  DataRow _buildTripRow(int index) {
-    final destinations = ['Paris, France', 'Tokyo, Japan', 'New York, USA', 'Bali, Indonesia', 'London, UK'];
-    final users = ['Alice Johnson', 'Bob Smith', 'Charlie Brown', 'Diana Prince', 'Evan Wright'];
-    final statuses = ['Scheduled', 'Completed', 'In Progress', 'Scheduled', 'Cancelled'];
-    
-    final destination = destinations[index % destinations.length];
-    final user = users[index % users.length];
-    final status = statuses[index % statuses.length];
+  DataRow _buildTripRow(dynamic trip) {
+    final destination = trip['destination'] ?? 'Unknown';
+    final budget = '\$${(double.tryParse(trip['budget']?.toString() ?? '0') ?? 0).toStringAsFixed(0)}';
+    final status = trip['status'] ?? 'Scheduled';
+    final date = trip['start_date']?.toString().split('T').first ?? 'N/A';
 
     return DataRow(
       cells: [
@@ -125,15 +136,8 @@ class TripsView extends StatelessWidget {
             Text(destination, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           ],
         )),
-        DataCell(const Text('Jul 12 – Jul 20, 2025', style: TextStyle(fontSize: 13, color: AppColors.textDim))),
-        DataCell(Row(
-          children: [
-            CircleAvatar(radius: 12, backgroundColor: AppColors.background, child: const Text('👤', style: TextStyle(fontSize: 10))),
-            const SizedBox(width: 8),
-            Text(user, style: const TextStyle(fontSize: 13)),
-          ],
-        )),
-        DataCell(const Text('\$3,500', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+        DataCell(Text(date, style: const TextStyle(fontSize: 13, color: AppColors.textDim))),
+        DataCell(Text(budget, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
         DataCell(_buildStatusBadge(status)),
         DataCell(Row(
           children: [

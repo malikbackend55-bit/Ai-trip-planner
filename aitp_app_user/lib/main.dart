@@ -1,11 +1,17 @@
-import 'package:flutter/material.dart';
-import 'core/theme.dart';
-import 'features/auth/splash_view.dart';
-import 'features/auth/login_view.dart';
-import 'features/main_navigation.dart';
+import 'package:provider/provider.dart';
+import 'core/auth_provider.dart';
+import 'core/trip_provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => TripProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -47,10 +53,16 @@ class _InitializerState extends State<Initializer> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    
+    if (_showSplash) {
+      return const SplashView();
+    }
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 800),
-      child: _showSplash 
-        ? const SplashView() 
+      child: authProvider.isAuthenticated 
+        ? const MainNavigation() 
         : const LoginView(),
     );
   }

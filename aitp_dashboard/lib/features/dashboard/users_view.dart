@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/dashboard_provider.dart';
 import '../../core/theme.dart';
 
 class UsersView extends StatefulWidget {
@@ -15,6 +16,10 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DashboardProvider>(context, listen: false).refresh();
+    });
   }
 
   @override
@@ -25,6 +30,8 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<DashboardProvider>(context);
+
     return FadeTransition(
       opacity: _anim,
       child: Column(
@@ -43,20 +50,23 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
             ],
           ),
           const SizedBox(height: 24),
-          _buildUserStatsRow(),
+          _buildUserStatsRow(provider),
           const SizedBox(height: 24),
           _buildSearchBar(),
           const SizedBox(height: 16),
-          _buildUsersTable(),
+          _buildUsersTable(provider),
         ],
       ),
     );
   }
 
-  Widget _buildUserStatsRow() {
+  Widget _buildUserStatsRow(DashboardProvider provider) {
+    final stats = provider.stats;
+    final totalUsers = stats['totalUsers']?.toString() ?? '0';
+
     return Row(
       children: [
-        _buildMiniStat('Total Users', '8,210', Icons.people, AppColors.primary),
+        _buildMiniStat('Total Users', totalUsers, Icons.people, AppColors.primary),
         const SizedBox(width: 16),
         _buildMiniStat('Premium', '1,245', Icons.star, AppColors.accent),
         const SizedBox(width: 16),
@@ -142,7 +152,9 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildUsersTable() {
+  Widget _buildUsersTable(DashboardProvider provider) {
+    final users = provider.users;
+    
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -150,45 +162,48 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      child: DataTable(
-        headingRowHeight: 56,
-        dataRowMinHeight: 56,
-        dataRowMaxHeight: 64,
-        horizontalMargin: 24,
-        columnSpacing: 20,
-        headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain, fontSize: 13),
-        columns: const [
-          DataColumn(label: Text('User')),
-          DataColumn(label: Text('Email')),
-          DataColumn(label: Text('Role')),
-          DataColumn(label: Text('Trips')),
-          DataColumn(label: Text('Joined')),
-          DataColumn(label: Text('Status')),
-          DataColumn(label: Text('Actions')),
-        ],
-        rows: List.generate(8, (i) => _buildUserRow(i)),
-      ),
+      child: provider.isLoading 
+        ? const Padding(
+            padding: EdgeInsets.all(64.0),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        : SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowHeight: 56,
+              dataRowMinHeight: 56,
+              dataRowMaxHeight: 64,
+              horizontalMargin: 24,
+              columnSpacing: 20,
+              headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain, fontSize: 13),
+              columns: const [
+                DataColumn(label: Text('User')),
+                DataColumn(label: Text('Email')),
+                DataColumn(label: Text('Role')),
+                DataColumn(label: Text('Joined')),
+                DataColumn(label: Text('Actions')),
+              ],
+              rows: users.map((u) => _buildUserRow(u)).toList(),
+            ),
+          ),
     );
   }
 
-  DataRow _buildUserRow(int i) {
-    final names = ['Alice Johnson', 'Bob Smith', 'Charlie Brown', 'Diana Prince', 'Evan Wright', 'Fiona Davis', 'George Lee', 'Hannah Kim'];
-    final emails = ['alice@mail.com', 'bob@mail.com', 'charlie@mail.com', 'diana@mail.com', 'evan@mail.com', 'fiona@mail.com', 'george@mail.com', 'hannah@mail.com'];
-    final roles = ['Admin', 'Premium', 'Standard', 'Premium', 'Standard', 'Admin', 'Standard', 'Premium'];
-    final trips = ['24', '18', '7', '32', '3', '15', '9', '21'];
-    final statuses = ['Active', 'Active', 'Active', 'Active', 'Inactive', 'Active', 'Banned', 'Active'];
+  DataRow _buildUserRow(dynamic user) {
+    final name = user['name'] ?? 'Unknown';
+    final email = user['email'] ?? 'No email';
+    final role = user['role']?.toString().toUpperCase() ?? 'USER';
+    final joined = user['created_at']?.toString().split('T').first ?? 'N/A';
 
     return DataRow(cells: [
       DataCell(Row(children: [
-        CircleAvatar(radius: 14, backgroundColor: AppColors.primary.withValues(alpha: 0.15), child: Text(names[i][0], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary))),
+        CircleAvatar(radius: 14, backgroundColor: AppColors.primary.withValues(alpha: 0.15), child: Text(name[0], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary))),
         const SizedBox(width: 10),
-        Text(names[i], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
       ])),
-      DataCell(Text(emails[i], style: const TextStyle(fontSize: 12, color: AppColors.textDim))),
-      DataCell(_buildRoleBadge(roles[i])),
-      DataCell(Text(trips[i], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-      DataCell(Text('Jan ${10 + i}, 2024', style: const TextStyle(fontSize: 12, color: AppColors.textDim))),
-      DataCell(_buildStatusDot(statuses[i])),
+      DataCell(Text(email, style: const TextStyle(fontSize: 12, color: AppColors.textDim))),
+      DataCell(_buildRoleBadge(role)),
+      DataCell(Text(joined, style: const TextStyle(fontSize: 12, color: AppColors.textDim))),
       DataCell(Row(children: [
         IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDim), onPressed: () {}),
         IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent), onPressed: () {}),

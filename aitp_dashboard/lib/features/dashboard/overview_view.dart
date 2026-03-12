@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
+import '../../core/dashboard_provider.dart';
 import '../../core/theme.dart';
 
 class OverviewView extends StatefulWidget {
@@ -20,6 +22,10 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
       duration: const Duration(milliseconds: 1000),
     );
     _controller.forward();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DashboardProvider>(context, listen: false).refresh();
+    });
   }
 
   @override
@@ -30,12 +36,21 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<DashboardProvider>(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildAnimatedSection(0.0, _buildSectionHeader('Overview Stats')),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildAnimatedSection(0.0, _buildSectionHeader('Overview Stats')),
+            if (provider.isLoading)
+              const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+          ],
+        ),
         const SizedBox(height: 20),
-        _buildAnimatedSection(0.1, _buildStatsGrid()),
+        _buildAnimatedSection(0.1, _buildStatsGrid(provider)),
         const SizedBox(height: 32),
         _buildAnimatedSection(0.2, _buildSectionHeader('Analytics & Growth')),
         const SizedBox(height: 20),
@@ -43,7 +58,7 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
         const SizedBox(height: 32),
         _buildAnimatedSection(0.4, _buildSectionHeader('Recent Activity')),
         const SizedBox(height: 20),
-        _buildAnimatedSection(0.5, _buildActivityList()),
+        _buildAnimatedSection(0.5, _buildActivityList(provider)),
       ],
     );
   }
@@ -73,7 +88,13 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(DashboardProvider provider) {
+    final stats = provider.stats;
+    final totalTrips = stats['totalTrips']?.toString() ?? '0';
+    final totalUsers = stats['totalUsers']?.toString() ?? '0';
+    final totalRevenue = '\$${(double.tryParse(stats['totalRevenue']?.toString() ?? '0') ?? 0).toStringAsFixed(0)}';
+    final completedTrips = stats['completedTrips']?.toString() ?? '0';
+
     return GridView.count(
       crossAxisCount: 4,
       shrinkWrap: true,
@@ -81,11 +102,11 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
       mainAxisSpacing: 20,
       childAspectRatio: 1.8,
       physics: const NeverScrollableScrollPhysics(),
-      children: const [
-        _StatCard(title: 'Total Trips', value: '12,450', icon: '✈️', trend: '+12%', isPositive: true),
-        _StatCard(title: 'Active Users', value: '8,210', icon: '👥', trend: '+5.4%', isPositive: true),
-        _StatCard(title: 'Revenue', value: '\$142,500', icon: '💰', trend: '-2.1%', isPositive: false),
-        _StatCard(title: 'Completed', value: '9,840', icon: '✅', trend: '+8.7%', isPositive: true),
+      children: [
+        _StatCard(title: 'Total Trips', value: totalTrips, icon: '✈️', trend: '+12%', isPositive: true),
+        _StatCard(title: 'Active Users', value: totalUsers, icon: '👥', trend: '+5.4%', isPositive: true),
+        _StatCard(title: 'Revenue', value: totalRevenue, icon: '💰', trend: '+1.2%', isPositive: true),
+        _StatCard(title: 'Completed', value: completedTrips, icon: '✅', trend: '+8.7%', isPositive: true),
       ],
     );
   }
@@ -170,35 +191,38 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildActivityList() {
+  Widget _buildActivityList(DashboardProvider provider) {
+    final trips = provider.trips;
+    
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 5,
-        separatorBuilder: (_, _a) => const Divider(height: 1, color: AppColors.border),
-        itemBuilder: (context, index) {
-          final activities = [
-            ('Alice Johnson', 'planned a trip to Paris', '2 min ago'),
-            ('Bob Smith', 'completed a trip to Tokyo', '15 min ago'),
-            ('Charlie Brown', 'booked a flight to Bali', '1 hour ago'),
-            ('Diana Prince', 'updated her itinerary for London', '3 hours ago'),
-            ('Evan Wright', 'cancelled a trip to Dubai', '5 hours ago'),
-          ];
-          final (name, action, time) = activities[index];
-          return ListTile(
-            leading: CircleAvatar(backgroundColor: AppColors.background, child: Text(name[0], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))),
-            title: Text('$name $action', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            subtitle: Text(time, style: const TextStyle(fontSize: 12, color: AppColors.textDim)),
-            trailing: const Text('View →', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
-          );
-        },
-      ),
+      child: trips.isEmpty 
+        ? const Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Center(child: Text('No recent activity', style: TextStyle(color: AppColors.textDim))),
+          )
+        : ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: trips.length > 5 ? 5 : trips.length,
+            separatorBuilder: (_, _a) => const Divider(height: 1, color: AppColors.border),
+            itemBuilder: (context, index) {
+              final trip = trips[index];
+              final destination = trip['destination'] ?? 'Unkown';
+              final date = trip['start_date']?.toString().split('T').first ?? '';
+              
+              return ListTile(
+                leading: const CircleAvatar(backgroundColor: AppColors.background, child: Text('✈️', style: TextStyle(fontSize: 18))),
+                title: Text('New trip planned to $destination', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                subtitle: Text('Start date: $date', style: const TextStyle(fontSize: 12, color: AppColors.textDim)),
+                trailing: const Text('View →', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
+              );
+            },
+          ),
     );
   }
 }

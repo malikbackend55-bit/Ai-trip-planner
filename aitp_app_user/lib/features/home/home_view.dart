@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../core/auth_provider.dart';
+import '../../core/trip_provider.dart';
 import '../../core/theme.dart';
 import '../trips/create_trip_form.dart';
 
@@ -21,6 +24,11 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
        duration: const Duration(milliseconds: 1200),
     );
     _controller.forward();
+    
+    // Fetch real trips on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<TripProvider>(context, listen: false).fetchTrips();
+    });
   }
 
   @override
@@ -31,6 +39,8 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    final tripProvider = Provider.of<TripProvider>(context);
+    
     return Scaffold(
       backgroundColor: AppColors.gray50,
       body: SingleChildScrollView(
@@ -44,9 +54,9 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                 children: [
                    _buildAnimatedSection(0.1, _buildQuickActions(context)),
                   const SizedBox(height: 24),
-                  _buildAnimatedSection(0.2, _buildSectionHeader('Upcoming Trip', 'See all →')),
+                  _buildAnimatedSection(0.2, _buildSectionHeader('Your Trips', 'See all →')),
                   const SizedBox(height: 12),
-                  _buildAnimatedSection(0.3, const _TripCard()),
+                  _buildAnimatedSection(0.3, _buildTripSection(tripProvider)),
                   const SizedBox(height: 24),
                   _buildAnimatedSection(0.4, _buildSectionHeader('Suggested for You', 'More →')),
                   const SizedBox(height: 12),
@@ -79,7 +89,52 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
     );
   }
 
+  Widget _buildTripSection(TripProvider provider) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.g600));
+    }
+    
+    if (provider.trips.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.gray100),
+        ),
+        child: Column(
+          children: [
+            const Text('⛰️', style: TextStyle(fontSize: 40)),
+            const SizedBox(height: 12),
+            const Text(
+              'No trips yet',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Start planning your first adventure!',
+              style: TextStyle(color: AppColors.gray400, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTripForm())),
+              child: const Text('Create Trip'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Just show the first one for now as a "hero" trip
+    final trip = provider.trips.first;
+    return _TripCard(trip: trip);
+  }
+
   Widget _buildHeader(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final userName = authProvider.user?['name'] ?? 'Traveler';
+
     return Container(
       padding: const EdgeInsets.only(top: 60, left: 18, right: 18, bottom: 28),
       decoration: const BoxDecoration(
@@ -97,7 +152,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Good Morning ☀️',
+            'Welcome Back ✈️',
             style: TextStyle(
               fontSize: 11,
               color: AppColors.g300,
@@ -106,7 +161,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
           ),
           const SizedBox(height: 4),
           Text(
-            'Ahmed Hassan 👋',
+            '$userName 👋',
             style: GoogleFonts.fraunces(
               fontSize: 24,
               color: AppColors.white,
@@ -233,12 +288,18 @@ class _QuickAction extends StatelessWidget {
 }
 
 class _TripCard extends StatelessWidget {
-  const _TripCard();
+  final dynamic trip;
+  const _TripCard({required this.trip});
 
   @override
   Widget build(BuildContext context) {
+    final destination = trip['destination'] ?? 'Unknown';
+    final budget = double.tryParse(trip['budget']?.toString() ?? '0') ?? 0;
+    final status = trip['status'] ?? 'Upcoming';
+    final startDate = trip['start_date']?.toString().split('T').first ?? '';
+
     return Hero(
-      tag: 'trip_paris',
+      tag: 'trip_${trip['id']}',
       child: Material(
         color: Colors.transparent,
         child: Container(
@@ -264,21 +325,9 @@ class _TripCard extends StatelessWidget {
                     colors: [AppColors.g700, AppColors.g500],
                   ),
                 ),
-                child: Stack(
+                child: const Stack(
                   children: [
-                    const Center(child: Text('🗼', style: TextStyle(fontSize: 48))),
-                    Positioned(
-                      bottom: 10,
-                      left: 14,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text('🇫🇷', style: TextStyle(fontSize: 20)),
-                      ),
-                    ),
+                    Center(child: Text('✈️', style: TextStyle(fontSize: 48))),
                   ],
                 ),
               ),
@@ -287,14 +336,14 @@ class _TripCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Paris, France',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                    Text(
+                      destination,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      '📅 Jul 1 – Jul 10, 2025 · 2 people',
-                      style: TextStyle(fontSize: 11, color: AppColors.gray400),
+                    Text(
+                      '📅 $startDate · $status',
+                      style: const TextStyle(fontSize: 11, color: AppColors.gray400),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -306,13 +355,12 @@ class _TripCard extends StatelessWidget {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: const [
-                                  Text('Budget used', style: TextStyle(fontSize: 10, color: AppColors.gray400)),
-                                  Text('\$1,200', style: TextStyle(fontSize: 10, color: AppColors.gray400)),
+                                  Text('Estimated Budget', style: TextStyle(fontSize: 10, color: AppColors.gray400)),
                                 ],
                               ),
                               const SizedBox(height: 6),
                               LinearProgressIndicator(
-                                value: 0.34,
+                                value: 1.0,
                                 backgroundColor: AppColors.gray100,
                                 valueColor: const AlwaysStoppedAnimation(AppColors.g500),
                                 borderRadius: BorderRadius.circular(10),
@@ -322,9 +370,9 @@ class _TripCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        const Text(
-                          '\$3,500',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.g700),
+                        Text(
+                          '\$${budget.toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.g700),
                         ),
                       ],
                     ),
