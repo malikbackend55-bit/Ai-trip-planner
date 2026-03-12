@@ -3,47 +3,46 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme.dart';
 
 class ItineraryView extends StatelessWidget {
-  const ItineraryView({super.key});
+  final Map<String, dynamic> trip;
+  const ItineraryView({super.key, required this.trip});
 
   @override
   Widget build(BuildContext context) {
+    final itineraries = trip['itineraries'] as List? ?? [];
+    final destination = trip['destination'] ?? 'Unknown';
+    final startDate = trip['start_date']?.toString().split('T').first ?? '';
+
     return Scaffold(
       backgroundColor: AppColors.gray50,
       body: Column(
         children: [
           _buildHeader(context),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildDayHeader('Day 1', 'Tuesday, Jul 1', '⛅ 22°C'),
-                const _ActivityCard(
-                  time: '🌅',
-                  name: 'Eiffel Tower Visit',
-                  place: '📍 Champ de Mars, 7th Arr.',
-                  meta: ['⏱ 2h', 'Morning'],
-                  cost: '\$25',
-                  color: AppColors.sand,
-                ),
-                const _ActivityCard(
-                  time: '☀️',
-                  name: 'Louvre Museum',
-                  place: '📍 Rue de Rivoli, 1st Arr.',
-                  meta: ['⏱ 3h', 'Afternoon'],
-                  cost: '\$20',
-                  color: Color(0xfffef3c7),
-                ),
-                const _ActivityCard(
-                  time: '🌙',
-                  name: 'Dinner at Le Marais',
-                  place: '📍 Rue de Bretagne, 3rd',
-                  meta: ['⏱ 2h', 'Evening'],
-                  cost: '\$60',
-                  color: Color(0xffede9fe),
-                ),
-                const SizedBox(height: 100),
-              ],
-            ),
+            child: itineraries.isEmpty
+                ? const Center(child: Text('No itinerary generated for this trip.', style: TextStyle(color: AppColors.gray400)))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: itineraries.length,
+                    itemBuilder: (context, index) {
+                      final day = itineraries[index];
+                      final activities = day['activities'] as List? ?? [];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDayHeader('Day ${day['day_number']}', 'Schedule', '☀️ 24°C'),
+                          ...activities.map((act) => _ActivityCard(
+                                time: _getEmojiForTime(act['time_slot']),
+                                name: act['title'] ?? 'Activity',
+                                place: '📍 ${act['location'] ?? 'Various locations'}',
+                                meta: [act['time_slot'] ?? 'Anytime', '⏱ 2h'],
+                                cost: 'Free',
+                                color: _getColorForTime(act['time_slot']),
+                              )),
+                          const SizedBox(height: 24),
+                        ],
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -55,9 +54,31 @@ class ItineraryView extends StatelessWidget {
     );
   }
 
+  String _getEmojiForTime(String? slot) {
+    switch (slot?.toLowerCase()) {
+      case 'morning': return '🌅';
+      case 'afternoon': return '☀️';
+      case 'evening': return '🌙';
+      default: return '📍';
+    }
+  }
+
+  Color _getColorForTime(String? slot) {
+    switch (slot?.toLowerCase()) {
+      case 'morning': return AppColors.sand;
+      case 'afternoon': return const Color(0xfffef3c7);
+      case 'evening': return const Color(0xffede9fe);
+      default: return AppColors.gray100;
+    }
+  }
+
   Widget _buildHeader(BuildContext context) {
+    final destination = trip['destination'] ?? 'Unknown';
+    final startDate = trip['start_date']?.toString().split('T').first ?? '';
+    final endDate = trip['end_date']?.toString().split('T').first ?? '';
+
     return Hero(
-      tag: 'trip_paris',
+      tag: 'trip_${trip['id']}',
       child: Material(
         color: AppColors.g800,
         child: Container(
@@ -74,13 +95,13 @@ class ItineraryView extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                '🇫🇷 Paris, France',
+                '🌏 $destination',
                 style: GoogleFonts.fraunces(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.white),
               ),
               const SizedBox(height: 4),
-              const Text(
-                '📅 Jul 1 – Jul 10, 2025  ·  👥 2 people',
-                style: TextStyle(fontSize: 11, color: AppColors.g300, fontWeight: FontWeight.normal),
+              Text(
+                '📅 $startDate – $endDate  ·  👥 2 people',
+                style: const TextStyle(fontSize: 11, color: AppColors.g300, fontWeight: FontWeight.normal),
               ),
               const SizedBox(height: 16),
               _buildTabs(),

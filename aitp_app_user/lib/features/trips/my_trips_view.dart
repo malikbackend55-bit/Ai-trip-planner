@@ -1,13 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../core/trip_provider.dart';
 import '../../core/theme.dart';
 import '../itinerary/itinerary_view.dart';
 
-class MyTripsView extends StatelessWidget {
+class MyTripsView extends StatefulWidget {
   const MyTripsView({super.key});
 
   @override
+  State<MyTripsView> createState() => _MyTripsViewState();
+}
+
+class _MyTripsViewState extends State<MyTripsView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<TripProvider>(context, listen: false).fetchTrips();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final tripProvider = Provider.of<TripProvider>(context);
+    final trips = tripProvider.trips;
+
     return Scaffold(
       backgroundColor: AppColors.gray50,
       body: Column(
@@ -15,30 +33,17 @@ class MyTripsView extends StatelessWidget {
           _buildHeader(),
           _buildTabs(),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: const [
-                 _MyTripCard(
-                  name: 'Paris, France',
-                  date: 'Jul 1 – Jul 10, 2025',
-                  budget: '\$3,500',
-                  used: '\$1,200',
-                  progress: 0.34,
-                  emoji: '🇫🇷',
-                  color: AppColors.g700,
-                ),
-                _MyTripCard(
-                  name: 'Tokyo, Japan',
-                  date: 'Sep 5 – Sep 12, 2025',
-                  budget: '\$2,800',
-                  used: '\$0',
-                  progress: 0.05,
-                  emoji: '🇯🇵',
-                  color: Colors.orange,
-                ),
-                SizedBox(height: 80),
-              ],
-            ),
+            child: tripProvider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : trips.isEmpty
+                    ? const Center(child: Text('No trips found.', style: TextStyle(color: AppColors.gray400)))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: trips.length,
+                        itemBuilder: (context, index) {
+                          return _MyTripCard(trip: trips[index]);
+                        },
+                      ),
           ),
         ],
       ),
@@ -122,26 +127,19 @@ class _TabItem extends StatelessWidget {
 }
 
 class _MyTripCard extends StatelessWidget {
-  final String name;
-  final String date;
-  final String budget;
-  final String used;
-  final double progress;
-  final String emoji;
-  final Color color;
+  final dynamic trip;
 
-  const _MyTripCard({
-    required this.name,
-    required this.date,
-    required this.budget,
-    required this.used,
-    required this.progress,
-    required this.emoji,
-    required this.color,
-  });
+  const _MyTripCard({required this.trip});
 
   @override
   Widget build(BuildContext context) {
+    final name = trip['destination'] ?? 'Unknown';
+    final startDate = trip['start_date']?.toString().split('T').first ?? '';
+    final budget = '\$${(double.tryParse(trip['budget']?.toString() ?? '0') ?? 0).toStringAsFixed(0)}';
+    final progress = 0.35; // Mock progress for now
+    final emoji = '🌏';
+    final color = AppColors.g700;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -178,7 +176,7 @@ class _MyTripCard extends StatelessWidget {
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.white),
                     ),
                     Text(
-                      date,
+                      startDate,
                       style: TextStyle(fontSize: 11, color: AppColors.white.withOpacity(0.8)),
                     ),
                   ],
@@ -198,7 +196,7 @@ class _MyTripCard extends StatelessWidget {
                       style: const TextStyle(fontSize: 10, color: AppColors.gray400, fontWeight: FontWeight.w600),
                     ),
                     Text(
-                      '$used used · ${(progress * 100).toInt()}%',
+                      'Active · ${(progress * 100).toInt()}%',
                       style: const TextStyle(fontSize: 10, color: AppColors.gray400, fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -216,7 +214,7 @@ class _MyTripCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ItineraryView())),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ItineraryView(trip: trip))),
                         child: const _BtnSm(label: '👁️ View', isPrimary: true),
                       ),
                     ),

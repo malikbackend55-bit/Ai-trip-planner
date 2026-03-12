@@ -1,23 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../core/auth_provider.dart';
+import '../../core/trip_provider.dart';
 import '../../core/theme.dart';
+import '../auth/login_view.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final tripProvider = Provider.of<TripProvider>(context);
+    final user = authProvider.user;
+    final tripCount = tripProvider.trips.length;
+
     return Scaffold(
       backgroundColor: AppColors.gray50,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(user),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  _buildStats(),
+                  _buildStats(tripCount),
                   const SizedBox(height: 24),
                   _buildMenuSection('Preferences', [
                     _MenuItem(icon: '🎯', title: 'Interests & Hobbies'),
@@ -32,7 +41,7 @@ class ProfileView extends StatelessWidget {
                     _MenuItem(icon: '🔒', title: 'Privacy & Security'),
                   ]),
                   const SizedBox(height: 24),
-                  _buildLogoutButton(),
+                  _buildLogoutButton(context, authProvider),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -43,7 +52,10 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(dynamic user) {
+    final name = user?['name'] ?? 'Traveler';
+    final email = user?['email'] ?? 'No email';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(top: 60, bottom: 40),
@@ -75,7 +87,7 @@ class ProfileView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Ahmed Hassan',
+            name,
             style: GoogleFonts.fraunces(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -83,23 +95,23 @@ class ProfileView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'ahmed@email.com',
-            style: TextStyle(fontSize: 12, color: AppColors.g300),
+          Text(
+            email,
+            style: const TextStyle(fontSize: 12, color: AppColors.g300),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStats() {
+  Widget _buildStats(int tripCount) {
     return Row(
       children: [
-        _StatCard(num: '5', label: 'Trips'),
+        _StatCard(num: tripCount.toString(), label: 'Trips'),
         const SizedBox(width: 8),
-        _StatCard(num: '12', label: 'Countries'),
+        _StatCard(num: '1', label: 'Countries'),
         const SizedBox(width: 8),
-        _StatCard(num: '48', label: 'AI Chats'),
+        _StatCard(num: '💎', label: 'Premium'),
       ],
     );
   }
@@ -123,22 +135,33 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildLogoutButton() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red.withOpacity(0.2)),
-      ),
-      child: const Text(
-        '🚪 Logout',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w800,
-          color: Colors.redAccent,
+  Widget _buildLogoutButton(BuildContext context, AuthProvider auth) {
+    return GestureDetector(
+      onTap: () async {
+        await auth.logout();
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginView()),
+            (route) => false,
+          );
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.red.withOpacity(0.2)),
+        ),
+        child: const Text(
+          '🚪 Logout',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: Colors.redAccent,
+          ),
         ),
       ),
     );

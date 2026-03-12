@@ -5,6 +5,7 @@ import '../../core/auth_provider.dart';
 import '../../core/trip_provider.dart';
 import '../../core/theme.dart';
 import '../trips/create_trip_form.dart';
+import '../itinerary/itinerary_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -302,7 +303,10 @@ class _TripCard extends StatelessWidget {
       tag: 'trip_${trip['id']}',
       child: Material(
         color: Colors.transparent,
-        child: Container(
+        child: InkWell(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ItineraryView(trip: trip))),
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(24),
