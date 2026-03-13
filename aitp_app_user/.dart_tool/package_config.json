@@ -116,6 +116,12 @@
       "languageVersion": "3.3"
     },
     {
+      "name": "go_router",
+      "rootUri": "file:///C:/Users/sarba/AppData/Local/Pub/Cache/hosted/pub.dev/go_router-17.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
       "name": "google_fonts",
       "rootUri": "file:///C:/Users/sarba/AppData/Local/Pub/Cache/hosted/pub.dev/google_fonts-8.0.2",
       "packageUri": "lib/",

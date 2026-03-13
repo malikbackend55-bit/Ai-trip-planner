@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'core/auth_provider.dart';
 import 'core/trip_provider.dart';
 import 'core/theme.dart';
@@ -20,56 +20,95 @@ void main() {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AI Trip Planner',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const Initializer(),
-    );
-  }
+  State<MyApp> createState() => _MyAppState();
 }
 
-class Initializer extends StatefulWidget {
-  const Initializer({super.key});
-
-  @override
-  State<Initializer> createState() => _InitializerState();
-}
-
-class _InitializerState extends State<Initializer> {
-  bool _showSplash = true;
+class _MyAppState extends State<MyApp> {
+  late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
-    _startApp();
+    _router = GoRouter(
+      initialLocation: '/splash',
+      refreshListenable: context.read<AuthProvider>(),
+      redirect: (context, state) {
+        final authProvider = context.read<AuthProvider>();
+        final isLoggingIn = state.matchedLocation == '/login';
+        final isSplash = state.matchedLocation == '/splash';
+
+        if (isSplash) return null; // Let splash handle itself or timer
+
+        if (!authProvider.isAuthenticated) {
+          return isLoggingIn ? null : '/login';
+        }
+
+        if (isLoggingIn) {
+          return '/home';
+        }
+
+        return null;
+      },
+      routes: [
+        GoRoute(
+          path: '/splash',
+          builder: (context, state) => const SplashPage(),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => const LoginView(),
+        ),
+        GoRoute(
+          path: '/home',
+          builder: (context, state) => const MainNavigation(),
+        ),
+      ],
+    );
   }
 
-  void _startApp() async {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      title: 'AI Trip Planner',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      routerConfig: _router,
+    );
+  }
+}
+
+class SplashPage extends StatefulWidget {
+  const SplashPage({super.key});
+
+  @override
+  State<SplashPage> createState() => _SplashPageState();
+}
+
+class _SplashPageState extends State<SplashPage> {
+  @override
+  void initState() {
+    super.initState();
+    _navigateToNext();
+  }
+
+  void _navigateToNext() async {
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
-      setState(() => _showSplash = false);
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.isAuthenticated) {
+        context.go('/home');
+      } else {
+        context.go('/login');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    
-    if (_showSplash) {
-      return const SplashView();
-    }
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 800),
-      child: authProvider.isAuthenticated 
-        ? const MainNavigation() 
-        : const LoginView(),
-    );
+    return const SplashView();
   }
 }
