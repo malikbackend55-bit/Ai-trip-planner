@@ -1,47 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/trip_provider.dart';
 import '../../core/theme.dart';
 import '../itinerary/itinerary_view.dart';
+import '../trips/create_trip_form.dart';
 
-class MyTripsView extends StatefulWidget {
+class MyTripsView extends ConsumerStatefulWidget {
   const MyTripsView({super.key});
 
   @override
-  State<MyTripsView> createState() => _MyTripsViewState();
+  ConsumerState<MyTripsView> createState() => _MyTripsViewState();
 }
 
-class _MyTripsViewState extends State<MyTripsView> {
+class _MyTripsViewState extends ConsumerState<MyTripsView> {
+  String _selectedTab = 'Upcoming';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<TripProvider>(context, listen: false).fetchTrips();
+      ref.read(tripProvider).fetchTrips();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final tripProvider = Provider.of<TripProvider>(context);
-    final trips = tripProvider.trips;
+    final tripsState = ref.watch(tripProvider);
+    final allTrips = tripsState.trips;
+    
+    final filteredTrips = allTrips.where((trip) {
+      final status = trip['status'] ?? 'Upcoming';
+      return status == _selectedTab;
+    }).toList();
 
     return Scaffold(
       backgroundColor: AppColors.gray50,
       body: Column(
         children: [
-          _buildHeader(),
-          _buildTabs(),
+          _buildHeader().animate().fade(duration: 400.ms).slideY(begin: -0.1, curve: Curves.easeOutQuart),
+          _buildTabs().animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
           Expanded(
-            child: tripProvider.isLoading
+            child: tripsState.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : trips.isEmpty
-                    ? const Center(child: Text('No trips found.', style: TextStyle(color: AppColors.gray400)))
+                : filteredTrips.isEmpty
+                    ? Center(child: Text('No $_selectedTab trips found.', style: const TextStyle(color: AppColors.gray400)))
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: trips.length,
+                        itemCount: filteredTrips.length,
                         itemBuilder: (context, index) {
-                          return _MyTripCard(trip: trips[index]);
+                          return _MyTripCard(trip: filteredTrips[index])
+                            .animate()
+                            .fade(duration: 400.ms, delay: (100 + index * 50).ms)
+                            .slideY(begin: 0.1, duration: 400.ms, delay: (100 + index * 50).ms, curve: Curves.easeOutQuart);
                         },
                       ),
           ),
@@ -64,13 +76,16 @@ class _MyTripsViewState extends State<MyTripsView> {
               color: AppColors.gray800,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [AppColors.g500, AppColors.g700]),
-              shape: BoxShape.circle,
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTripForm())),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [AppColors.g500, AppColors.g700]),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add, color: AppColors.white, size: 20),
             ),
-            child: const Icon(Icons.add, color: AppColors.white, size: 20),
           ),
         ],
       ),
@@ -87,8 +102,16 @@ class _MyTripsViewState extends State<MyTripsView> {
       ),
       child: Row(
         children: [
-          _TabItem(label: 'Upcoming', isActive: true),
-          _TabItem(label: 'Past'),
+          _TabItem(
+            label: 'Upcoming', 
+            isActive: _selectedTab == 'Upcoming',
+            onTap: () => setState(() => _selectedTab = 'Upcoming'),
+          ),
+          _TabItem(
+            label: 'Past', 
+            isActive: _selectedTab == 'Past',
+            onTap: () => setState(() => _selectedTab = 'Past'),
+          ),
         ],
       ),
     );
@@ -98,27 +121,32 @@ class _MyTripsViewState extends State<MyTripsView> {
 class _TabItem extends StatelessWidget {
   final String label;
   final bool isActive;
-  const _TabItem({required this.label, this.isActive = false});
+  final VoidCallback onTap;
+  
+  const _TabItem({required this.label, this.isActive = false, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isActive 
-            ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
-            : null,
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: isActive ? AppColors.g700 : AppColors.gray400,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isActive 
+              ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+              : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: isActive ? AppColors.g700 : AppColors.gray400,
+            ),
           ),
         ),
       ),
@@ -136,9 +164,12 @@ class _MyTripCard extends StatelessWidget {
     final name = trip['destination'] ?? 'Unknown';
     final startDate = trip['start_date']?.toString().split('T').first ?? '';
     final budget = '\$${(double.tryParse(trip['budget']?.toString() ?? '0') ?? 0).toStringAsFixed(0)}';
-    final progress = 0.35; // Mock progress for now
-    final emoji = '🌏';
-    final color = AppColors.g700;
+    
+    final status = trip['status'] ?? 'Upcoming';
+    final isPast = status == 'Past';
+    final progress = isPast ? 1.0 : 0.35; // Logic should ideally be based on dates
+    final emoji = _getEmojiForDestination(name);
+    final color = isPast ? AppColors.gray600 : AppColors.g700;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -196,7 +227,7 @@ class _MyTripCard extends StatelessWidget {
                       style: const TextStyle(fontSize: 10, color: AppColors.gray400, fontWeight: FontWeight.w600),
                     ),
                     Text(
-                      'Active · ${(progress * 100).toInt()}%',
+                      isPast ? 'Completed' : 'Active · ${(progress * 100).toInt()}%',
                       style: const TextStyle(fontSize: 10, color: AppColors.gray400, fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -205,7 +236,7 @@ class _MyTripCard extends StatelessWidget {
                 LinearProgressIndicator(
                   value: progress,
                   backgroundColor: AppColors.gray100,
-                  valueColor: AlwaysStoppedAnimation(progress < 0.2 ? Colors.amber : AppColors.g500),
+                  valueColor: AlwaysStoppedAnimation(isPast ? AppColors.gray400 : (progress < 0.2 ? Colors.amber : AppColors.g500)),
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -231,6 +262,15 @@ class _MyTripCard extends StatelessWidget {
       ),
     );
   }
+  
+  String _getEmojiForDestination(String dest) {
+    if (dest.toLowerCase().contains('paris')) return '🗼';
+    if (dest.toLowerCase().contains('bali')) return '🌴';
+    if (dest.toLowerCase().contains('tokyo')) return '⛩️';
+    if (dest.toLowerCase().contains('new york')) return '🗽';
+    if (dest.toLowerCase().contains('london')) return '💂';
+    return '🌏';
+  }
 }
 
 class _BtnSm extends StatelessWidget {
@@ -240,22 +280,20 @@ class _BtnSm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isPrimary ? AppColors.g50 : AppColors.gray50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isPrimary ? AppColors.g300 : AppColors.gray200),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            color: isPrimary ? AppColors.g700 : AppColors.gray600,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      decoration: BoxDecoration(
+        color: isPrimary ? AppColors.g50 : AppColors.gray50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isPrimary ? AppColors.g300 : AppColors.gray200),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: isPrimary ? AppColors.g700 : AppColors.gray600,
         ),
       ),
     );

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import 'api_service.dart';
 
 class TripProvider extends ChangeNotifier {
@@ -18,12 +20,13 @@ class TripProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
+      debugPrint('Error fetching trips: $e');
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> generateTrip(Map<String, dynamic> data) async {
+  Future<String?> generateTrip(Map<String, dynamic> data) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -31,11 +34,28 @@ class TripProvider extends ChangeNotifier {
       await fetchTrips();
       _isLoading = false;
       notifyListeners();
-      return true;
+      return null; // Success, no error
+    } on DioException catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return _extractErrorMessage(e);
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      return false;
+      return e.toString();
     }
   }
+
+  String _extractErrorMessage(DioException e) {
+    if (e.response != null && e.response?.data != null) {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        if (data.containsKey('message')) return data['message'];
+        if (data.containsKey('error')) return data['error'];
+      }
+    }
+    return 'A network error occurred: ${e.message}';
+  }
 }
+
+final tripProvider = ChangeNotifierProvider<TripProvider>((ref) => TripProvider());

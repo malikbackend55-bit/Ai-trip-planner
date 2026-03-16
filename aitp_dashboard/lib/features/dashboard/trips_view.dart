@@ -1,13 +1,14 @@
-import 'package:provider/provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/dashboard_provider.dart';
 import '../../core/theme.dart';
 
-class TripsView extends StatelessWidget {
+class TripsView extends ConsumerWidget {
   const TripsView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final provider = Provider.of<DashboardProvider>(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final provider = ref.watch(dashboardProvider);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,9 +163,9 @@ class TripsView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
         status,

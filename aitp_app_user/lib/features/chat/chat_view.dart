@@ -1,46 +1,78 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme.dart';
+import '../../core/chat_provider.dart';
 
-class ChatView extends StatelessWidget {
+class ChatView extends ConsumerStatefulWidget {
   const ChatView({super.key});
 
   @override
+  ConsumerState<ChatView> createState() => _ChatViewState();
+}
+
+class _ChatViewState extends ConsumerState<ChatView> {
+  final TextEditingController _textController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  void _sendMessage() {
+    final text = _textController.text;
+    if (text.isEmpty) return;
+    
+    _textController.clear();
+    ref.read(chatProvider.notifier).sendMessage(text);
+    
+    Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final messages = ref.watch(chatProvider);
+    final isTyping = ref.watch(chatProvider.notifier).isTyping;
+    
+    ref.listen(chatProvider, (previous, next) {
+      if (next.length > (previous?.length ?? 0)) {
+        Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.gray50,
       body: Column(
         children: [
-          _buildHeader(),
+          _buildHeader().animate().fade(duration: 400.ms).slideY(begin: -0.1, curve: Curves.easeOutQuart),
           Expanded(
-            child: ListView(
+            child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              children: const [
-                _ChatBubble(
-                  isAi: true,
-                  text: 'Hey! I\'m your AI travel assistant 🌍 Tell me where you\'d like to go and I\'ll plan the perfect trip!',
-                ),
-                _ChatBubble(
-                  isAi: false,
-                  text: 'Plan a 9-day trip to Paris for 2 people, budget \$3500',
-                ),
-                _ChatBubble(
-                  isAi: true,
-                  text: 'Perfect! 🗼 Paris is a great choice! I\'ve created a detailed 9-day itinerary covering the Eiffel Tower, Louvre, Versailles & more. Shall I show it?',
-                ),
-                _ChatBubble(
-                  isAi: false,
-                  text: 'Yes! And add some vegetarian restaurants',
-                ),
-                _ChatBubble(
-                  isAi: true,
-                  text: '✅ Updated! I\'ve added 5 top vegetarian spots including Le Grenier de Notre-Dame and Bob\'s Kitchen. Your itinerary is ready! 🥗',
-                ),
-                SizedBox(height: 20),
-              ],
+              itemCount: messages.length + (isTyping ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == messages.length && isTyping) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('AI is typing...', style: TextStyle(color: AppColors.gray400, fontStyle: FontStyle.italic)),
+                  ).animate().fadeIn();
+                }
+                final msg = messages[index];
+                return _ChatBubble(isAi: msg.isAi, text: msg.text)
+                  .animate()
+                  .fade(duration: 300.ms)
+                  .slideY(begin: 0.1, duration: 300.ms, curve: Curves.easeOutQuart);
+              },
             ),
           ),
-          _buildQuickReplies(),
-          _buildInputBar(),
+          _buildQuickReplies().animate().fade(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
+          _buildInputBar().animate().fade(duration: 400.ms, delay: 300.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
           const SizedBox(height: 8),
         ],
       ),
@@ -92,10 +124,10 @@ class ChatView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _QrChip(label: '🌦️ Check weather'),
-          _QrChip(label: '💰 Budget tips'),
-          _QrChip(label: '🏨 Best hotels'),
-          _QrChip(label: '📅 Change dates'),
+          GestureDetector(onTap: () { _textController.text = '🌦️ Check weather for my trip'; _sendMessage(); }, child: const _QrChip(label: '🌦️ Check weather')),
+          GestureDetector(onTap: () { _textController.text = '💰 How can I travel cheap?'; _sendMessage(); }, child: const _QrChip(label: '💰 Budget tips')),
+          GestureDetector(onTap: () { _textController.text = '🏨 Recommend some hotels'; _sendMessage(); }, child: const _QrChip(label: '🏨 Best hotels')),
+          GestureDetector(onTap: () { _textController.text = '📅 How do I change my dates?'; _sendMessage(); }, child: const _QrChip(label: '📅 Change dates')),
         ],
       ),
     );
@@ -112,26 +144,37 @@ class ChatView extends StatelessWidget {
         children: [
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: AppColors.gray50,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: AppColors.gray200),
               ),
-              child: const Text('Ask anything about your trip...', style: TextStyle(fontSize: 12, color: AppColors.gray400)),
+              child: TextField(
+                controller: _textController,
+                decoration: const InputDecoration(
+                  hintText: 'Ask anything about your trip...',
+                  hintStyle: TextStyle(fontSize: 12, color: AppColors.gray400),
+                  border: InputBorder.none,
+                ),
+                onSubmitted: (_) => _sendMessage(),
+              ),
             ),
           ),
           const SizedBox(width: 10),
           const Icon(Icons.mic, color: AppColors.gray600, size: 24),
           const SizedBox(width: 10),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [AppColors.g500, AppColors.g700]),
-              shape: BoxShape.circle,
+          GestureDetector(
+            onTap: _sendMessage,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [AppColors.g500, AppColors.g700]),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.send, color: AppColors.white, size: 18),
             ),
-            child: const Icon(Icons.send, color: AppColors.white, size: 18),
           ),
         ],
       ),

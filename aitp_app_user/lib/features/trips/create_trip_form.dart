@@ -1,28 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:syncfusion_flutter_datepicker/datepicker.dart';
 import '../../core/theme.dart';
 import '../../core/trip_provider.dart';
+import '../../core/places_service.dart';
 import '../main_navigation.dart';
 
-class CreateTripForm extends StatefulWidget {
+class CreateTripForm extends ConsumerStatefulWidget {
   const CreateTripForm({super.key});
 
   @override
-  State<CreateTripForm> createState() => _CreateTripFormState();
+  ConsumerState<CreateTripForm> createState() => _CreateTripFormState();
 }
 
-class _CreateTripFormState extends State<CreateTripForm> {
+class _CreateTripFormState extends ConsumerState<CreateTripForm> {
   int _currentStep = 1;
   bool _isGenerating = false;
   String _aiStatus = 'Initializing Gemini AI...';
+  
+  final PlacesService _placesService = PlacesService();
 
   // State Data
   final TextEditingController _destinationController = TextEditingController();
   DateTime _startDate = DateTime.now().add(const Duration(days: 7));
   DateTime _endDate = DateTime.now().add(const Duration(days: 14));
   double _budget = 3500;
-  List<String> _selectedInterests = ['Museums', 'Fine Dining', 'Walking Tours', 'Nature'];
+  final List<String> _selectedInterests = ['Museums', 'Fine Dining', 'Walking Tours', 'Nature'];
   int _guests = 2;
+  String _accommodation = 'Hotel';
+
+  String _formatBudget(double b) {
+    return b.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,39 +151,109 @@ class _CreateTripFormState extends State<CreateTripForm> {
       key: const ValueKey(1),
       padding: const EdgeInsets.all(20),
       children: [
-        _buildLabel('FROM'),
-        _buildInput('📍 New York, USA', isFilled: true),
         _buildLabel('TO (DESTINATION)'),
-        TextField(
-          controller: _destinationController,
-          decoration: InputDecoration(
-            hintText: '🌍 Search destination...',
-            filled: true,
-            fillColor: AppColors.gray50,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.gray200)),
-          ),
+        Autocomplete<String>(
+          optionsBuilder: (TextEditingValue textEditingValue) async {
+            if (textEditingValue.text == '') {
+              return const Iterable<String>.empty();
+            }
+            return await _placesService.getAutocompleteSuggestions(textEditingValue.text);
+          },
+          onSelected: (String selection) {
+            _destinationController.text = selection;
+          },
+          fieldViewBuilder: (BuildContext context, TextEditingController textEditingController, FocusNode focusNode, VoidCallback onFieldSubmitted) {
+            // Keep the controllers synced so user can also just type without picking
+            textEditingController.addListener(() {
+              _destinationController.text = textEditingController.text;
+            });
+            // Init text if we navigate back and forth
+            if (textEditingController.text != _destinationController.text) {
+              textEditingController.text = _destinationController.text;
+            }
+
+            return TextField(
+              controller: textEditingController,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                hintText: '🌍 Search destination...',
+                filled: true,
+                fillColor: AppColors.gray50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.gray200)),
+                suffixIcon: textEditingController.text.isNotEmpty 
+                  ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () => textEditingController.clear()) 
+                  : null,
+              ),
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4.0,
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width - 40,
+                  height: 200,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8.0),
+                    itemCount: options.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final String option = options.elementAt(index);
+                      return GestureDetector(
+                        onTap: () {
+                          onSelected(option);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: const BoxDecoration(
+                            border: Border(bottom: BorderSide(color: AppColors.gray100)),
+                          ),
+                          child: Text(option, style: const TextStyle(fontSize: 14)),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
         ),
+        const SizedBox(height: 16),
         _buildLabel('POPULAR DESTINATIONS'),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _DestSmall(emoji: '🗼', label: 'Paris', color: Colors.amber),
-              _DestSmall(emoji: '🌴', label: 'Bali', color: Colors.teal),
-              _DestSmall(emoji: '⛩️', label: 'Tokyo', color: Colors.orange),
+              GestureDetector(onTap: () => setState(() => _destinationController.text = 'Paris, France'), child: _DestSmall(emoji: '🗼', label: 'Paris', color: Colors.amber)),
+              GestureDetector(onTap: () => setState(() => _destinationController.text = 'Bali, Indonesia'), child: _DestSmall(emoji: '🌴', label: 'Bali', color: Colors.teal)),
+              GestureDetector(onTap: () => setState(() => _destinationController.text = 'Tokyo, Japan'), child: _DestSmall(emoji: '⛩️', label: 'Tokyo', color: Colors.orange)),
             ],
           ),
         ),
         _buildLabel('GROUP SIZE'),
         Row(
           children: [
-            _CounterBtn(icon: Icons.remove),
-            const Expanded(child: Text('2 People 👥', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
-            _CounterBtn(icon: Icons.add, isPrimary: true),
+            GestureDetector(
+              onTap: () {
+                if (_guests > 1) setState(() => _guests--);
+              },
+              child: const _CounterBtn(icon: Icons.remove),
+            ),
+            Expanded(child: Text('$_guests People 👥', textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+            GestureDetector(
+              onTap: () => setState(() => _guests++),
+              child: const _CounterBtn(icon: Icons.add, isPrimary: true),
+            ),
           ],
         ),
       ],
     );
+  }
+
+  String _formatDate(DateTime date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}';
   }
 
   Widget _buildStep2() {
@@ -188,22 +267,54 @@ class _CreateTripFormState extends State<CreateTripForm> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _DateInfo(label: 'FROM', date: 'Jul 1'),
+              _DateInfo(label: 'FROM', date: _formatDate(_startDate), year: _startDate.year.toString()),
               const Text('✈️', style: TextStyle(fontSize: 24)),
-              _DateInfo(label: 'TO', date: 'Jul 10'),
+              _DateInfo(label: 'TO', date: _formatDate(_endDate), year: _endDate.year.toString()),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        const Text('July 2025', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        // Mock Calendar Placeholder
-        Container(height: 200, color: AppColors.gray50, child: const Center(child: Text('Calendar View'))),
+        const SizedBox(height: 24),
+        Container(
+          height: 350,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.gray200),
+          ),
+          child: SfDateRangePicker(
+            onSelectionChanged: (DateRangePickerSelectionChangedArgs args) {
+              if (args.value is PickerDateRange) {
+                final DateTime? start = args.value.startDate;
+                final DateTime? end = args.value.endDate;
+                if (start != null && end != null) {
+                  setState(() {
+                    _startDate = start;
+                    _endDate = end;
+                  });
+                } else if (start != null) { // just picked start
+                  setState(() {
+                    _startDate = start;
+                    _endDate = start; // temp same day
+                  });
+                }
+              }
+            },
+            selectionMode: DateRangePickerSelectionMode.range,
+            initialSelectedRange: PickerDateRange(_startDate, _endDate),
+            minDate: DateTime.now(),
+            todayHighlightColor: AppColors.g700,
+            startRangeSelectionColor: AppColors.g700,
+            endRangeSelectionColor: AppColors.g700,
+            rangeSelectionColor: AppColors.g200.withOpacity(0.5),
+            selectionTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildStep3() {
+    final days = _endDate.difference(_startDate).inDays + 1;
     return ListView(
       key: const ValueKey(3),
       padding: const EdgeInsets.all(20),
@@ -212,9 +323,9 @@ class _CreateTripFormState extends State<CreateTripForm> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(color: AppColors.g50, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.g300)),
           child: Column(
-            children: const [
-              Text('\$3,500', style: TextStyle(fontFamily: 'Fraunces', fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.g700)),
-              Text('Total budget for 2 people · 9 days', style: TextStyle(fontSize: 11, color: AppColors.g600)),
+            children: [
+              Text('\$${_formatBudget(_budget)}', style: const TextStyle(fontFamily: 'Fraunces', fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.g700)),
+              Text('Total budget for $_guests people · $days days', style: const TextStyle(fontSize: 11, color: AppColors.g600)),
             ],
           ),
         ),
@@ -238,10 +349,10 @@ class _CreateTripFormState extends State<CreateTripForm> {
           crossAxisSpacing: 10,
           childAspectRatio: 2.5,
           children: [
-             _Option(emoji: '🏨', label: 'Hotel', isSelected: true),
-             _Option(emoji: '🏠', label: 'Airbnb'),
-             _Option(emoji: '🛏️', label: 'Hostel'),
-             _Option(emoji: '🏖️', label: 'Resort'),
+             GestureDetector(onTap: () => setState(() => _accommodation = 'Hotel'), child: _Option(emoji: '🏨', label: 'Hotel', isSelected: _accommodation == 'Hotel')),
+             GestureDetector(onTap: () => setState(() => _accommodation = 'Airbnb'), child: _Option(emoji: '🏠', label: 'Airbnb', isSelected: _accommodation == 'Airbnb')),
+             GestureDetector(onTap: () => setState(() => _accommodation = 'Hostel'), child: _Option(emoji: '🛏️', label: 'Hostel', isSelected: _accommodation == 'Hostel')),
+             GestureDetector(onTap: () => setState(() => _accommodation = 'Resort'), child: _Option(emoji: '🏖️', label: 'Resort', isSelected: _accommodation == 'Resort')),
           ],
         ),
       ],
@@ -299,16 +410,17 @@ class _CreateTripFormState extends State<CreateTripForm> {
       await Future.delayed(const Duration(milliseconds: 1500));
     }
 
-    final tripProvider = Provider.of<TripProvider>(context, listen: false);
-    final success = await tripProvider.generateTrip({
+    final trips = ref.read(tripProvider);
+    final errorMessage = await trips.generateTrip({
       'destination': _destinationController.text.isEmpty ? 'Paris, France' : _destinationController.text,
       'start_date': _startDate.toIso8601String(),
       'end_date': _endDate.toIso8601String(),
       'budget': _budget,
       'interests': _selectedInterests,
+      'accommodation': _accommodation,
     });
 
-    if (success) {
+    if (errorMessage == null) {
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const MainNavigation()),
@@ -316,10 +428,13 @@ class _CreateTripFormState extends State<CreateTripForm> {
         );
       }
     } else {
-      setState(() => _isGenerating = false);
       if (mounted) {
+        setState(() => _isGenerating = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Generation failed. Please try again.')),
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -366,9 +481,10 @@ class _CounterBtn extends StatelessWidget {
 class _DateInfo extends StatelessWidget {
   final String label;
   final String date;
-  const _DateInfo({required this.label, required this.date});
+  final String year;
+  const _DateInfo({required this.label, required this.date, required this.year});
   @override
-  Widget build(BuildContext context) => Column(children: [Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.gray400)), const SizedBox(height: 4), Text(date, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.g800)), const Text('2025', style: TextStyle(fontSize: 10, color: AppColors.gray400))]);
+  Widget build(BuildContext context) => Column(children: [Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.gray400)), const SizedBox(height: 4), Text(date, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.g800)), Text(year, style: const TextStyle(fontSize: 10, color: AppColors.gray400))]);
 }
 
 class _Option extends StatelessWidget {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme.dart';
 
 class ExploreView extends StatelessWidget {
@@ -22,7 +23,7 @@ class ExploreView extends StatelessWidget {
                 _ExploreCard(name: 'Bali, Indonesia', sub: 'Island Paradise · Asia', price: '\$1,100', emoji: '🌴', rating: '4.7', color: Colors.teal),
                 _ExploreCard(name: 'New York, USA', sub: 'The Big Apple · Americas', price: '\$3,800', emoji: '🗽', rating: '4.8', color: Colors.blue),
                 const SizedBox(height: 80),
-              ],
+              ].animate(interval: 100.ms).fade(duration: 400.ms).slideY(begin: 0.1, duration: 400.ms, curve: Curves.easeOutQuart),
             ),
           ),
         ],
@@ -86,9 +87,9 @@ class ExploreView extends StatelessWidget {
           _Chip(label: '⛰️ Nature'),
           _Chip(label: '💰 Budget'),
           _Chip(label: '✨ Luxury'),
-        ],
+        ].animate(interval: 50.ms).fade(duration: 300.ms).scale(begin: const Offset(0.8, 0.8), duration: 300.ms, curve: Curves.easeOutBack),
       ),
-    );
+    ).animate().fade(duration: 400.ms, delay: 200.ms);
   }
 }
 

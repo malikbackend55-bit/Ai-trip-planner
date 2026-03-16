@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_service.dart';
 
 class DashboardProvider extends ChangeNotifier {
@@ -33,3 +34,5 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 }
+
+final dashboardProvider = ChangeNotifierProvider<DashboardProvider>((ref) => DashboardProvider());

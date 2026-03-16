@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/auth_provider.dart';
-import 'core/trip_provider.dart';
 import 'core/theme.dart';
 import 'features/auth/splash_view.dart';
 import 'features/main_navigation.dart';
 import 'features/auth/login_view.dart';
+import 'features/auth/register_view.dart';
 
 void main() {
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => TripProvider()),
-      ],
-      child: const MyApp(),
+    const ProviderScope(
+      child: MyApp(),
     ),
   );
 }
@@ -35,24 +31,6 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _router = GoRouter(
       initialLocation: '/splash',
-      refreshListenable: context.read<AuthProvider>(),
-      redirect: (context, state) {
-        final authProvider = context.read<AuthProvider>();
-        final isLoggingIn = state.matchedLocation == '/login';
-        final isSplash = state.matchedLocation == '/splash';
-
-        if (isSplash) return null; // Let splash handle itself or timer
-
-        if (!authProvider.isAuthenticated) {
-          return isLoggingIn ? null : '/login';
-        }
-
-        if (isLoggingIn) {
-          return '/home';
-        }
-
-        return null;
-      },
       routes: [
         GoRoute(
           path: '/splash',
@@ -61,6 +39,10 @@ class _MyAppState extends State<MyApp> {
         GoRoute(
           path: '/login',
           builder: (context, state) => const LoginView(),
+        ),
+        GoRoute(
+          path: '/register',
+          builder: (context, state) => const RegisterView(),
         ),
         GoRoute(
           path: '/home',
@@ -81,14 +63,14 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   void initState() {
     super.initState();
@@ -97,13 +79,12 @@ class _SplashPageState extends State<SplashPage> {
 
   void _navigateToNext() async {
     await Future.delayed(const Duration(seconds: 3));
-    if (mounted) {
-      final authProvider = context.read<AuthProvider>();
-      if (authProvider.isAuthenticated) {
-        context.go('/home');
-      } else {
-        context.go('/login');
-      }
+    if (!mounted) return;
+    final auth = ref.read(authProvider);
+    if (auth.isAuthenticated) {
+      context.go('/home');
+    } else {
+      context.go('/login');
     }
   }
 

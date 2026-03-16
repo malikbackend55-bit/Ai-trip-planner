@@ -1,42 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme.dart';
-import 'package:provider/provider.dart';
 import '../../core/auth_provider.dart';
-import '../main_navigation.dart';
 
-class RegisterView extends StatefulWidget {
+class RegisterView extends ConsumerStatefulWidget {
   const RegisterView({super.key});
 
   @override
-  State<RegisterView> createState() => _RegisterViewState();
+  ConsumerState<RegisterView> createState() => _RegisterViewState();
 }
 
-class _RegisterViewState extends State<RegisterView> with SingleTickerProviderStateMixin {
-   late AnimationController _controller;
-   late Animation<Offset> _formOffset;
+class _RegisterViewState extends ConsumerState<RegisterView> {
    final TextEditingController _nameController = TextEditingController();
    final TextEditingController _emailController = TextEditingController();
    final TextEditingController _passwordController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _formOffset = Tween<Offset>(begin: const Offset(0, 0.4), end: Offset.zero).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart),
-    );
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +33,7 @@ class _RegisterViewState extends State<RegisterView> with SingleTickerProviderSt
                 children: [
                   const SizedBox(height: 20),
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () => context.pop(),
                     child: const Icon(Icons.arrow_back, color: AppColors.gray800),
                   ),
                   const SizedBox(height: 40),
@@ -64,20 +44,14 @@ class _RegisterViewState extends State<RegisterView> with SingleTickerProviderSt
                       fontWeight: FontWeight.bold,
                       color: AppColors.g900,
                     ),
-                  ),
+                  ).animate().fade(duration: 500.ms, delay: 100.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
                   const SizedBox(height: 8),
                   const Text(
                     'Join thousands of travelers planning with AI.',
                     style: TextStyle(color: AppColors.gray400, fontSize: 14),
-                  ),
+                  ).animate().fade(duration: 500.ms, delay: 200.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
                   const SizedBox(height: 32),
-                  SlideTransition(
-                    position: _formOffset,
-                    child: FadeTransition(
-                      opacity: _controller,
-                      child: _buildForm(),
-                    ),
-                  ),
+                  _buildForm().animate().fade(duration: 500.ms, delay: 300.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
                 ],
               ),
             ),
@@ -123,7 +97,7 @@ class _RegisterViewState extends State<RegisterView> with SingleTickerProviderSt
           children: [
             const Text('Already have an account?', style: TextStyle(color: AppColors.gray400, fontSize: 13)),
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => context.pop(),
               child: const Text('Login', style: TextStyle(color: AppColors.g700, fontWeight: FontWeight.bold, fontSize: 13)),
             ),
           ],
@@ -146,6 +120,7 @@ class _RegisterViewState extends State<RegisterView> with SingleTickerProviderSt
             border: Border.all(color: AppColors.gray200),
           ),
           child: TextField(
+            controller: controller,
             obscureText: isPassword,
             decoration: InputDecoration(
               icon: Icon(icon, color: AppColors.gray400, size: 20),
@@ -171,22 +146,21 @@ class _RegisterViewState extends State<RegisterView> with SingleTickerProviderSt
       return;
     }
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.register(
+    final auth = ref.read(authProvider);
+    final errorMessage = await auth.register(
       _nameController.text.trim(),
       _emailController.text.trim(),
       _passwordController.text,
     );
-    if (success) {
-      // Navigate to main navigation on successful registration
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainNavigation()),
-      );
+    if (errorMessage == null) {
+      if (mounted) {
+        context.go('/home');
+      }
     } else {
       // Show error message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration failed. Please try again.')),
+          SnackBar(content: Text(errorMessage)),
         );
       }
     }

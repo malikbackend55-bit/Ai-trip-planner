@@ -72,7 +72,7 @@ class _SettingsViewState extends State<SettingsView> with SingleTickerProviderSt
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
                       child: const Text('Super Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
                     ),
                   ],
@@ -139,7 +139,14 @@ class _SettingsViewState extends State<SettingsView> with SingleTickerProviderSt
             ],
           ),
         ),
-        Switch(value: value, onChanged: onChanged, activeTrackColor: AppColors.primary.withValues(alpha: 0.4), thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.primary : null)),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeTrackColor: AppColors.primary.withOpacity(0.4),
+          thumbColor: WidgetStateProperty.resolveWith<Color?>(
+            (states) => states.contains(WidgetState.selected) ? AppColors.primary : null,
+          ),
+        ),
       ],
     );
   }
@@ -221,7 +228,7 @@ class _SettingsViewState extends State<SettingsView> with SingleTickerProviderSt
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.error.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

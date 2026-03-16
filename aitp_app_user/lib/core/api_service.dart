@@ -1,9 +1,15 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   late Dio dio;
-  static const String baseUrl = 'http://localhost:5001/api';
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:8000/api';
+    }
+    return 'http://localhost:8000/api';
+  }
 
   ApiService() {
     dio = Dio(BaseOptions(

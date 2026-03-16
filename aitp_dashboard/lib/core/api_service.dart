@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   late Dio dio;
-  static const String baseUrl = 'http://localhost:5001/api';
+  static const String baseUrl = 'http://localhost:8000/api';
 
   ApiService() {
     dio = Dio(BaseOptions(

@@ -1,15 +1,16 @@
-import 'package:provider/provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/dashboard_provider.dart';
 import '../../core/theme.dart';
 
-class UsersView extends StatefulWidget {
+class UsersView extends ConsumerStatefulWidget {
   const UsersView({super.key});
 
   @override
-  State<UsersView> createState() => _UsersViewState();
+  ConsumerState<UsersView> createState() => _UsersViewState();
 }
 
-class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMixin {
+class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProviderStateMixin {
   late AnimationController _anim;
 
   @override
@@ -18,7 +19,7 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
     _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<DashboardProvider>(context, listen: false).refresh();
+      ref.read(dashboardProvider).refresh();
     });
   }
 
@@ -30,7 +31,7 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<DashboardProvider>(context);
+    final provider = ref.watch(dashboardProvider);
 
     return FadeTransition(
       opacity: _anim,
@@ -90,7 +91,7 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(width: 14),
@@ -197,7 +198,7 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
 
     return DataRow(cells: [
       DataCell(Row(children: [
-        CircleAvatar(radius: 14, backgroundColor: AppColors.primary.withValues(alpha: 0.15), child: Text(name[0], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary))),
+        CircleAvatar(radius: 14, backgroundColor: AppColors.primary.withOpacity(0.15), child: Text(name[0], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary))),
         const SizedBox(width: 10),
         Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
       ])),
@@ -220,7 +221,7 @@ class _UsersViewState extends State<UsersView> with SingleTickerProviderStateMix
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withValues(alpha: 0.3))),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withOpacity(0.3))),
       child: Text(role, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
     );
   }

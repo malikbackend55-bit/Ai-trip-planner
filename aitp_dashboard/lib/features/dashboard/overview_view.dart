@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/dashboard_provider.dart';
 import '../../core/theme.dart';
 
-class OverviewView extends StatefulWidget {
+class OverviewView extends ConsumerStatefulWidget {
   const OverviewView({super.key});
 
   @override
-  State<OverviewView> createState() => _OverviewViewState();
+  ConsumerState<OverviewView> createState() => _OverviewViewState();
 }
 
-class _OverviewViewState extends State<OverviewView> with SingleTickerProviderStateMixin {
+class _OverviewViewState extends ConsumerState<OverviewView> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -24,7 +24,7 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
     _controller.forward();
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<DashboardProvider>(context, listen: false).refresh();
+      ref.read(dashboardProvider).refresh();
     });
   }
 
@@ -36,7 +36,7 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<DashboardProvider>(context);
+    final provider = ref.watch(dashboardProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +173,7 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
                           barWidth: 4,
                           isStrokeCapRound: true,
                           dotData: const FlDotData(show: false),
-                          belowBarData: BarAreaData(show: true, color: AppColors.primary.withValues(alpha: 0.1)),
+                          belowBarData: BarAreaData(show: true, color: AppColors.primary.withOpacity(0.1)),
                         ),
                       ],
                     ),
@@ -243,7 +243,7 @@ class _OverviewViewState extends State<OverviewView> with SingleTickerProviderSt
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: trips.length > 5 ? 5 : trips.length,
-            separatorBuilder: (_, _a) => const Divider(height: 1, color: AppColors.border),
+            separatorBuilder: (_, a) => const Divider(height: 1, color: AppColors.border),
             itemBuilder: (context, index) {
               final trip = trips[index];
               final destination = trip['destination'] ?? 'Unkown';

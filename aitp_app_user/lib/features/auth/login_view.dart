@@ -1,42 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme.dart';
-import 'register_view.dart';
-import 'package:provider/provider.dart';
 import '../../core/auth_provider.dart';
-import '../main_navigation.dart';
 
-class LoginView extends StatefulWidget {
+class LoginView extends ConsumerStatefulWidget {
   const LoginView({super.key});
 
   @override
-  State<LoginView> createState() => _LoginViewState();
+  ConsumerState<LoginView> createState() => _LoginViewState();
 }
 
-class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMixin {
-   late AnimationController _controller;
-   late Animation<Offset> _formOffset;
+class _LoginViewState extends ConsumerState<LoginView> {
    final TextEditingController _emailController = TextEditingController();
    final TextEditingController _passwordController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _formOffset = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart),
-    );
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,15 +31,9 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 60),
-                  _buildLogo(),
+                  _buildLogo().animate().fade(duration: 500.ms, delay: 100.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
                   const SizedBox(height: 32),
-                  SlideTransition(
-                    position: _formOffset,
-                    child: FadeTransition(
-                      opacity: _controller,
-                      child: _buildForm(),
-                    ),
-                  ),
+                  _buildForm().animate().fade(duration: 500.ms, delay: 300.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
                 ],
               ),
             ),
@@ -137,10 +110,9 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
   Widget _buildForm() {
     return Column(
       children: [
-        _buildTextField('Email Address', Icons.email_outlined),
-        _buildTextField('Email Address', Icons.email_outlined, controller: _emailController), // Pass controller
+        _buildTextField('Email Address', Icons.email_outlined, controller: _emailController),
         const SizedBox(height: 16),
-        _buildTextField('Password', Icons.lock_outline, isPassword: true, controller: _passwordController), // Pass controller
+        _buildTextField('Password', Icons.lock_outline, isPassword: true, controller: _passwordController),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
@@ -150,7 +122,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
         ),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: _handleLogin, // Call _handleLogin
+          onPressed: _handleLogin,
           child: const Text('Login'),
         ),
         const SizedBox(height: 24),
@@ -173,7 +145,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
             const Text('Don\'t have an account?', style: TextStyle(color: AppColors.gray400, fontSize: 13)),
             TextButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterView()));
+                context.go('/register');
               },
               child: const Text('Sign Up', style: TextStyle(color: AppColors.g700, fontWeight: FontWeight.bold, fontSize: 13)),
             ),
@@ -197,6 +169,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
             border: Border.all(color: AppColors.gray200),
           ),
           child: TextField(
+            controller: controller,
             obscureText: isPassword,
             decoration: InputDecoration(
               icon: Icon(icon, color: AppColors.gray400, size: 20),
@@ -211,21 +184,19 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
   }
 
   Future<void> _handleLogin() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.login(
+    final auth = ref.read(authProvider);
+    final errorMessage = await auth.login(
       _emailController.text.trim(),
       _passwordController.text,
     );
-    if (success) {
-      // Navigate to main navigation on successful login
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainNavigation()),
-      );
+    if (errorMessage == null) {
+      if (mounted) {
+        context.go('/home');
+      }
     } else {
-      // Show error message (you can use a dialog or snack bar)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed. Please check your credentials.')),
+          SnackBar(content: Text(errorMessage)),
         );
       }
     }

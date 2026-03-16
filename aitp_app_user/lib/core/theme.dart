@@ -16,6 +16,7 @@ class AppColors {
   static const Color sand = Color(0xfffefce8);
   static const Color earth = Color(0xff92400e);
   static const Color sky = Color(0xff0ea5e9);
+   static const Color error = Color.fromARGB(255, 250, 71, 0);
   static const Color coral = Color(0xfff97316);
   static const Color black = Color(0xff0f1a0f);
   static const Color white = Colors.white;

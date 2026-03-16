@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/dashboard_provider.dart';
 import '../../core/theme.dart';
 
-class AnalyticsView extends StatefulWidget {
+class AnalyticsView extends ConsumerStatefulWidget {
   const AnalyticsView({super.key});
 
   @override
-  State<AnalyticsView> createState() => _AnalyticsViewState();
+  ConsumerState<AnalyticsView> createState() => _AnalyticsViewState();
 }
 
-class _AnalyticsViewState extends State<AnalyticsView> with SingleTickerProviderStateMixin {
+class _AnalyticsViewState extends ConsumerState<AnalyticsView> with SingleTickerProviderStateMixin {
   late AnimationController _anim;
 
   @override
@@ -28,7 +28,7 @@ class _AnalyticsViewState extends State<AnalyticsView> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<DashboardProvider>(context);
+    final provider = ref.watch(dashboardProvider);
     final stats = provider.stats;
 
     return FadeTransition(
@@ -242,9 +242,9 @@ class _AnalyticsViewState extends State<AnalyticsView> with SingleTickerProvider
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: s.$3 * 0.15),
+                color: AppColors.primary.withOpacity(s.$3 * 0.15),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                border: Border.all(color: AppColors.primary.withOpacity(0.1)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

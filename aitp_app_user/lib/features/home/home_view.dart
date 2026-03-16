@@ -1,46 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/auth_provider.dart';
 import '../../core/trip_provider.dart';
 import '../../core/theme.dart';
 import '../trips/create_trip_form.dart';
 import '../itinerary/itinerary_view.dart';
 
-class HomeView extends StatefulWidget {
+class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
 
   @override
-  State<HomeView> createState() => _HomeViewState();
+  ConsumerState<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _HomeViewState extends ConsumerState<HomeView> {
   
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-       vsync: this,
-       duration: const Duration(milliseconds: 1200),
-    );
-    _controller.forward();
     
     // Fetch real trips on load
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<TripProvider>(context, listen: false).fetchTrips();
+      ref.read(tripProvider).fetchTrips();
     });
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final tripProvider = Provider.of<TripProvider>(context);
+    final trips = ref.watch(tripProvider);
     
     return Scaffold(
       backgroundColor: AppColors.gray50,
@@ -57,7 +46,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                     const SizedBox(height: 24),
                     _buildAnimatedSection(0.2, _buildSectionHeader('Your Trips', 'See all →')),
                     const SizedBox(height: 12),
-                    _buildAnimatedSection(0.3, _buildTripSection(tripProvider)),
+                    _buildAnimatedSection(0.3, _buildTripSection(trips)),
                     const SizedBox(height: 24),
                     _buildAnimatedSection(0.4, _buildSectionHeader('Suggested for You', 'More →')),
                     const SizedBox(height: 12),
@@ -72,21 +61,9 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
   }
 
   Widget _buildAnimatedSection(double delay, Widget child) {
-    return SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
-        CurvedAnimation(
-          parent: _controller,
-          curve: Interval(delay, delay + 0.4, curve: Curves.easeOutQuart),
-        ),
-      ),
-      child: FadeTransition(
-        opacity: CurvedAnimation(
-          parent: _controller,
-          curve: Interval(delay, delay + 0.4, curve: Curves.easeIn),
-        ),
-        child: child,
-      ),
-    );
+    return child.animate()
+      .fade(duration: 400.ms, delay: (delay * 1000).ms)
+      .slideY(begin: 0.1, duration: 400.ms, delay: (delay * 1000).ms, curve: Curves.easeOutQuart);
   }
 
   Widget _buildTripSection(TripProvider provider) {
@@ -132,8 +109,8 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
   }
 
   Widget _buildHeader(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final userName = authProvider.user?['name'] ?? 'Traveler';
+    final auth = ref.watch(authProvider);
+    final userName = auth.user?['name'] ?? 'Traveler';
 
     return Container(
       padding: const EdgeInsets.only(top: 60, left: 18, right: 18, bottom: 28),

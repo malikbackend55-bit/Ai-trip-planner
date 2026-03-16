@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 import 'api_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -33,7 +35,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<String?> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -46,15 +48,15 @@ class AuthProvider extends ChangeNotifier {
       
       _isLoading = false;
       notifyListeners();
-      return true;
+      return null; // Return null on success
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      return false;
+      return _extractErrorMessage(e) ?? 'Login failed. Please check your credentials.';
     }
   }
 
-  Future<bool> register(String name, String email, String password) async {
+  Future<String?> register(String name, String email, String password) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -67,12 +69,34 @@ class AuthProvider extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
-      return true;
+      return null; // Return null on success
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      return false;
+      return _extractErrorMessage(e) ?? 'Registration failed. Please try again.';
     }
+  }
+
+  String? _extractErrorMessage(dynamic error) {
+    if (error is DioException && error.response != null) {
+      final data = error.response!.data;
+      if (data is Map<String, dynamic>) {
+        if (data.containsKey('errors') && data['errors'] is Map) {
+          final errors = data['errors'] as Map;
+          if (errors.isNotEmpty) {
+             final firstError = errors.values.first;
+             if (firstError is List && firstError.isNotEmpty) {
+               return firstError.first.toString();
+             }
+             return firstError.toString();
+          }
+        }
+        if (data.containsKey('message')) {
+          return data['message'].toString();
+        }
+      }
+    }
+    return null;
   }
 
   Future<void> logout() async {
@@ -83,3 +107,5 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+
+final authProvider = ChangeNotifierProvider<AuthProvider>((ref) => AuthProvider());
