@@ -52,4 +52,18 @@ class ApiService {
   Future<Response> getAdminProfile() async {
     return dio.get('/user');
   }
+
+  Future<Response> createAdmin(String name, String email, String password) async {
+    return dio.post('/admin/users', data: {
+      'name': name,
+      'email': email,
+      'password': password,
+    });
+  }
+
+  Future<Response> updateUserRole(int id, String role) async {
+    return dio.put('/admin/users/$id/role', data: {
+      'role': role,
+    });
+  }
 }

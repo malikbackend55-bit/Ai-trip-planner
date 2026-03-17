@@ -46,10 +46,11 @@ class ApiService {
     });
   }
 
-  Future<Response> register(String name, String email, String password) async {
+  Future<Response> register(String name, String email, String phone, String password) async {
     return dio.post('/register', data: {
       'name': name,
       'email': email,
+      'phone': phone,
       'password': password,
     });
   }

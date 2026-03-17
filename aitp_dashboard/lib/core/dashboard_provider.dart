@@ -192,6 +192,34 @@ class DashboardProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> createAdmin(String name, String email, String password) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _apiService.createAdmin(name, email, password);
+      await refresh();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateUserRole(int id, String role) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _apiService.updateUserRole(id, role);
+      await refresh();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }
 
 final dashboardProvider = ChangeNotifierProvider<DashboardProvider>((ref) => DashboardProvider());

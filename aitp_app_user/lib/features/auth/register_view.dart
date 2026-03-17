@@ -16,6 +16,7 @@ class RegisterView extends ConsumerStatefulWidget {
 class _RegisterViewState extends ConsumerState<RegisterView> {
    final TextEditingController _nameController = TextEditingController();
    final TextEditingController _emailController = TextEditingController();
+   final TextEditingController _phoneController = TextEditingController();
    final TextEditingController _passwordController = TextEditingController();
 
   @override
@@ -83,6 +84,8 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
         const SizedBox(height: 16),
         _buildTextField('Email Address', Icons.email_outlined, controller: _emailController),
         const SizedBox(height: 16),
+        _buildTextField('Phone Number', Icons.phone_outlined, controller: _phoneController),
+        const SizedBox(height: 16),
         _buildTextField('Password', Icons.lock_outline, isPassword: true, controller: _passwordController),
         const SizedBox(height: 24),
         _buildTerms(),
@@ -137,6 +140,7 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
   Future<void> _handleRegister() async {
     if (_nameController.text.trim().isEmpty ||
         _emailController.text.trim().isEmpty ||
+        _phoneController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -150,6 +154,7 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
     final errorMessage = await auth.register(
       _nameController.text.trim(),
       _emailController.text.trim(),
+      _phoneController.text.trim(),
       _passwordController.text,
     );
     if (errorMessage == null) {

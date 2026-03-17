@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Trip;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
@@ -87,5 +88,56 @@ class AdminController extends Controller
         $trip = Trip::findOrFail($id);
         $trip->delete();
         return response()->json(['message' => 'Trip deleted successfully']);
+    }
+
+    public function createAdmin(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8',
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'admin',
+        ]);
+
+        return response()->json([
+            'message' => 'Admin created successfully',
+            'user' => $user
+        ]);
+    }
+
+    public function updateRole(Request $request, $id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'role' => 'required|string|in:admin,user',
+        ]);
+
+        $user = User::findOrFail($id);
+
+        // Prevent admin from removing their own admin privileges by accident
+        if ($user->id === auth()->id() && $request->role !== 'admin') {
+            return response()->json(['message' => 'Cannot change your own role'], 400);
+        }
+
+        $user->role = $request->role;
+        $user->save();
+
+        return response()->json([
+            'message' => 'User role updated successfully',
+            'user' => $user
+        ]);
     }
 }

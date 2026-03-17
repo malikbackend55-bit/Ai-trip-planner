@@ -92,7 +92,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> with SingleTickerPr
                   ],
                 ),
               ),
-              OutlinedButton(onPressed: () {}, child: const Text('Edit Profile', style: TextStyle(fontSize: 12))),
+              OutlinedButton(onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile editing coming soon.')));
+              }, child: const Text('Edit Profile', style: TextStyle(fontSize: 12))),
             ],
           ),
           const SizedBox(height: 20),
@@ -264,7 +266,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> with SingleTickerPr
                   ],
                 ),
               ),
-              OutlinedButton(onPressed: () {}, style: OutlinedButton.styleFrom(foregroundColor: AppColors.accent), child: const Text('Export')),
+              OutlinedButton(onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export feature not implemented.')));
+              }, style: OutlinedButton.styleFrom(foregroundColor: AppColors.accent), child: const Text('Export')),
             ],
           ),
           const SizedBox(height: 16),
@@ -279,7 +283,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> with SingleTickerPr
                   ],
                 ),
               ),
-              ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, minimumSize: const Size(100, 40)), child: const Text('Reset')),
+              ElevatedButton(onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reset functionality disabled in demo mode.')));
+              }, style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, minimumSize: const Size(100, 40)), child: const Text('Reset')),
             ],
           ),
         ],

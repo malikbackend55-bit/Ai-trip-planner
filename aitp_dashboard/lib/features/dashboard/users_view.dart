@@ -43,9 +43,11 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
             children: [
               const Text('User Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textMain)),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  _showCreateAdminDialog(context, ref);
+                },
                 icon: const Icon(Icons.person_add, size: 18),
-                label: const Text('Add User'),
+                label: const Text('Add Admin'),
                 style: ElevatedButton.styleFrom(minimumSize: const Size(160, 45), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
               ),
             ],
@@ -214,7 +216,9 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
       DataCell(_buildRoleBadge(role)),
       DataCell(Text(joined, style: const TextStyle(fontSize: 12, color: AppColors.textDim))),
       DataCell(Row(children: [
-        IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDim), onPressed: () {}),
+        IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDim), onPressed: () {
+          _showEditRoleDialog(context, ref, user);
+        }),
         IconButton(
           icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
           onPressed: () async {
@@ -261,6 +265,85 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withValues(alpha: 0.3))),
       child: Text(role, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  void _showCreateAdminDialog(BuildContext context, WidgetRef ref) {
+    final nameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create Admin User'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Full Name')),
+            TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email Address')),
+            TextField(controller: passCtrl, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameCtrl.text.isEmpty || emailCtrl.text.isEmpty || passCtrl.text.isEmpty) return;
+              final success = await ref.read(dashboardProvider).createAdmin(nameCtrl.text, emailCtrl.text, passCtrl.text);
+              if (mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(success ? 'Admin created' : 'Failed to create admin')));
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditRoleDialog(BuildContext context, WidgetRef ref, dynamic user) {
+    final currentRole = (user['role']?.toString().toLowerCase() == 'admin') ? 'admin' : 'user';
+    String selectedRole = currentRole;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Edit Role for ${user['name']}'),
+            content: DropdownButtonFormField<String>(
+              value: selectedRole,
+              items: const [
+                DropdownMenuItem(value: 'user', child: Text('User')),
+                DropdownMenuItem(value: 'admin', child: Text('Admin')),
+              ],
+              onChanged: (val) {
+                if (val != null) setState(() => selectedRole = val);
+              },
+              decoration: const InputDecoration(labelText: 'Role'),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (selectedRole == currentRole) {
+                    Navigator.pop(ctx);
+                    return;
+                  }
+                  final success = await ref.read(dashboardProvider).updateUserRole(user['id'], selectedRole);
+                  if (mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(success ? 'Role updated' : 'Failed to update role')));
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        }
+      ),
     );
   }
 }
