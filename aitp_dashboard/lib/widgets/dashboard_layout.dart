@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../core/theme.dart';
 
 class DashboardLayout extends StatefulWidget {
   final Widget content;
   final int selectedIndex;
   final Function(int) onIndexChanged;
   final String pageTitle;
+  final String adminName;
+  final String adminRole;
 
   const DashboardLayout({
     super.key,
@@ -13,6 +17,8 @@ class DashboardLayout extends StatefulWidget {
     required this.selectedIndex,
     required this.onIndexChanged,
     this.pageTitle = 'Dashboard Overview',
+    this.adminName = 'Admin User',
+    this.adminRole = 'Super Admin',
   });
 
   @override
@@ -59,8 +65,10 @@ class _DashboardLayoutState extends State<DashboardLayout> {
           _buildSidebarItem(0, '📊', 'Overview'),
           _buildSidebarItem(1, '✈️', 'Trips'),
           _buildSidebarItem(2, '👥', 'Users'),
-          _buildSidebarItem(3, '📈', 'Analytics'),
-          _buildSidebarItem(4, '⚙️', 'Settings'),
+          _buildSidebarItem(3, '📦', 'Catalog'),
+          _buildSidebarItem(4, '💰', 'Pricing'),
+          _buildSidebarItem(5, '📈', 'Analytics'),
+          _buildSidebarItem(6, '⚙️', 'Settings'),
           const Spacer(),
           _buildLogoutButton(),
           const SizedBox(height: 20),
@@ -104,7 +112,7 @@ class _DashboardLayoutState extends State<DashboardLayout> {
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.secondary.withOpacity(0.2) : Colors.transparent,
+          color: isSelected ? AppColors.secondary.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -178,12 +186,12 @@ class _DashboardLayoutState extends State<DashboardLayout> {
   Widget _buildProfileAvatar() {
     return Row(
       children: [
-        const Column(
+        Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text('Admin User', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            Text('Super Admin', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+            Text(widget.adminName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            Text(widget.adminRole, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
           ],
         ),
         const SizedBox(width: 12),
@@ -212,7 +220,15 @@ class _DashboardLayoutState extends State<DashboardLayout> {
             actions: [
               TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
               ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(),
+                onPressed: () async {
+                  Navigator.of(ctx).pop();
+                  // Clear auth token and redirect to login
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove('auth_token');
+                  if (mounted) {
+                    context.go('/login');
+                  }
+                },
                 child: const Text('Logout'),
               ),
             ],

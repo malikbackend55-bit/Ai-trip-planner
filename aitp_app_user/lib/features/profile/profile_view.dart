@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/auth_provider.dart';
 import '../../core/trip_provider.dart';
 import '../../core/theme.dart';
-import '../auth/login_view.dart';
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
@@ -53,7 +53,7 @@ class ProfileView extends ConsumerWidget {
                     const _MenuItem(icon: '🔒', title: 'Privacy & Security'),
                   ]).animate().fade(duration: 400.ms, delay: 300.ms).slideX(begin: 0.05, curve: Curves.easeOutQuart),
                   const SizedBox(height: 24),
-                  _buildLogoutButton(context, auth).animate().fade(duration: 400.ms, delay: 400.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
+                  _buildLogoutButton(context, ref).animate().fade(duration: 400.ms, delay: 400.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -90,9 +90,9 @@ class ProfileView extends ConsumerWidget {
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [AppColors.g400, AppColors.g600]),
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.white.withOpacity(0.3), width: 4),
+              border: Border.all(color: AppColors.white.withValues(alpha: 0.3), width: 4),
               boxShadow: [
-                 BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 8)),
+                 BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 8)),
               ],
             ),
             child: const Center(child: Text('👤', style: TextStyle(fontSize: 40))),
@@ -147,15 +147,13 @@ class ProfileView extends ConsumerWidget {
     );
   }
 
-  Widget _buildLogoutButton(BuildContext context, AuthProvider auth) {
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () async {
+        final auth = ref.read(authProvider);
         await auth.logout();
         if (context.mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const LoginView()),
-            (route) => false,
-          );
+          context.go('/login');
         }
       },
       child: Container(
@@ -164,7 +162,7 @@ class ProfileView extends ConsumerWidget {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.red.withOpacity(0.2)),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
         ),
         child: const Text(
           '🚪 Logout',
@@ -194,7 +192,7 @@ class _StatCard extends StatelessWidget {
           color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-             BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+             BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
@@ -234,7 +232,7 @@ class _MenuItem extends StatelessWidget {
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -252,8 +250,7 @@ class _MenuItem extends StatelessWidget {
 
 class _Toggle extends StatefulWidget {
   final bool initialValue;
-  final ValueChanged<bool>? onChanged;
-  const _Toggle({required this.initialValue, this.onChanged});
+  const _Toggle({required this.initialValue});
 
   @override
   State<_Toggle> createState() => _ToggleState();
@@ -275,9 +272,6 @@ class _ToggleState extends State<_Toggle> {
         setState(() {
           isOn = !isOn;
         });
-        if (widget.onChanged != null) {
-          widget.onChanged!(isOn);
-        }
       },
       child: Container(
         width: 34,

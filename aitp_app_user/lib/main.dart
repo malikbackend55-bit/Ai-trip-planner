@@ -7,6 +7,8 @@ import 'features/auth/splash_view.dart';
 import 'features/main_navigation.dart';
 import 'features/auth/login_view.dart';
 import 'features/auth/register_view.dart';
+import 'features/trips/create_trip_form.dart';
+import 'features/itinerary/itinerary_view.dart';
 
 void main() {
   runApp(
@@ -46,7 +48,21 @@ class _MyAppState extends State<MyApp> {
         ),
         GoRoute(
           path: '/home',
-          builder: (context, state) => const MainNavigation(),
+          builder: (context, state) {
+            final tabIndex = state.extra as int? ?? 0;
+            return MainNavigation(initialIndex: tabIndex);
+          },
+        ),
+        GoRoute(
+          path: '/create-trip',
+          builder: (context, state) => const CreateTripForm(),
+        ),
+        GoRoute(
+          path: '/itinerary',
+          builder: (context, state) {
+            final trip = state.extra as Map<String, dynamic>;
+            return ItineraryView(trip: trip);
+          },
         ),
       ],
     );

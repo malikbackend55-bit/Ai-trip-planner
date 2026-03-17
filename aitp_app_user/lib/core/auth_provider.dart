@@ -100,6 +100,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    try {
+      await _apiService.logout();
+    } catch (_) {
+      // Ignore API errors — always clear local state
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     _token = null;

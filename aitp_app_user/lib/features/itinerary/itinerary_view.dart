@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 
 class ItineraryView extends StatelessWidget {
@@ -9,8 +10,6 @@ class ItineraryView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final itineraries = trip['itineraries'] as List? ?? [];
-    final destination = trip['destination'] ?? 'Unknown';
-    final startDate = trip['start_date']?.toString().split('T').first ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.gray50,
@@ -89,7 +88,7 @@ class ItineraryView extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  GestureDetector(onTap: () => Navigator.pop(context), child: const Icon(Icons.arrow_back, color: AppColors.white)),
+                  GestureDetector(onTap: () => context.pop(), child: const Icon(Icons.arrow_back, color: AppColors.white)),
                   const Text('⬆️ Share', style: TextStyle(color: AppColors.g300, fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -115,7 +114,7 @@ class ItineraryView extends StatelessWidget {
   Widget _buildTabs() {
     return Container(
       padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(color: Colors.black.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
       child: Row(
         children: [
           _TabItem(label: 'Overview', isActive: true),
@@ -197,5 +196,5 @@ class _TabItem extends StatelessWidget {
   final bool isActive;
   const _TabItem({required this.label, this.isActive = false});
   @override
-  Widget build(BuildContext context) => Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 8), decoration: BoxDecoration(color: isActive ? AppColors.white : Colors.transparent, borderRadius: BorderRadius.circular(8)), child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isActive ? AppColors.g800 : AppColors.white.withOpacity(0.6)))));
+  Widget build(BuildContext context) => Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 8), decoration: BoxDecoration(color: isActive ? AppColors.white : Colors.transparent, borderRadius: BorderRadius.circular(8)), child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isActive ? AppColors.g800 : AppColors.white.withValues(alpha: 0.6)))));
 }

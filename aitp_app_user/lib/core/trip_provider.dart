@@ -46,6 +46,17 @@ class TripProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> deleteTrip(int id) async {
+    try {
+      await _apiService.deleteTrip(id);
+      await fetchTrips();
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting trip: $e');
+      return false;
+    }
+  }
+
   String _extractErrorMessage(DioException e) {
     if (e.response != null && e.response?.data != null) {
       final data = e.response?.data;

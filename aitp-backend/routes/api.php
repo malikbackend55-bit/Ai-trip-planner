@@ -5,12 +5,21 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\TripController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\AdminController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    
+    // Admin Routes
+    Route::get('/admin/stats', [AdminController::class, 'stats']);
+    Route::get('/admin/users', [AdminController::class, 'users']);
+    Route::get('/admin/trips', [AdminController::class, 'trips']);
+    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
+    Route::delete('/admin/trips/{id}', [AdminController::class, 'deleteTrip']);
+
     Route::post('/trips/generate', [TripController::class, 'generate']);
     Route::apiResource('trips', TripController::class);
     Route::post('/chat', [ChatController::class, 'sendMessage']);

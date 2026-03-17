@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_datepicker/datepicker.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 import '../../core/trip_provider.dart';
 import '../../core/places_service.dart';
-import '../main_navigation.dart';
 
 class CreateTripForm extends ConsumerStatefulWidget {
   const CreateTripForm({super.key});
@@ -88,7 +88,7 @@ class _CreateTripFormState extends ConsumerState<CreateTripForm> {
           Row(
             children: [
               GestureDetector(
-                onTap: () => Navigator.pop(context),
+                onTap: () => context.pop(),
                 child: const Icon(Icons.close, color: AppColors.white),
               ),
               const SizedBox(width: 16),
@@ -109,7 +109,7 @@ class _CreateTripFormState extends ConsumerState<CreateTripForm> {
                   height: 6,
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   decoration: BoxDecoration(
-                    color: isDone || isActive ? AppColors.white : AppColors.white.withOpacity(0.3),
+                    color: isDone || isActive ? AppColors.white : AppColors.white.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -305,7 +305,7 @@ class _CreateTripFormState extends ConsumerState<CreateTripForm> {
             todayHighlightColor: AppColors.g700,
             startRangeSelectionColor: AppColors.g700,
             endRangeSelectionColor: AppColors.g700,
-            rangeSelectionColor: AppColors.g200.withOpacity(0.5),
+            rangeSelectionColor: AppColors.g200.withValues(alpha: 0.5),
             selectionTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
@@ -422,10 +422,7 @@ class _CreateTripFormState extends ConsumerState<CreateTripForm> {
 
     if (errorMessage == null) {
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainNavigation()),
-          (route) => false,
-        );
+        context.go('/home');
       }
     } else {
       if (mounted) {
@@ -458,7 +455,6 @@ class _CreateTripFormState extends ConsumerState<CreateTripForm> {
   }
 
   Widget _buildLabel(String text) => Padding(padding: const EdgeInsets.only(top: 20, bottom: 8), child: Text(text, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.gray600)));
-  Widget _buildInput(String text, {bool isFilled = false}) => Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: isFilled ? AppColors.g50 : AppColors.gray50, borderRadius: BorderRadius.circular(12), border: Border.all(color: isFilled ? AppColors.g400 : AppColors.gray200)), child: Text(text, style: TextStyle(fontSize: 13, color: isFilled ? AppColors.g800 : AppColors.gray400)));
 }
 
 class _DestSmall extends StatelessWidget {

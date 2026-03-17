@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/trip_provider.dart';
 import '../../core/theme.dart';
-import '../itinerary/itinerary_view.dart';
-import '../trips/create_trip_form.dart';
 
 class MyTripsView extends ConsumerStatefulWidget {
   const MyTripsView({super.key});
@@ -77,7 +76,7 @@ class _MyTripsViewState extends ConsumerState<MyTripsView> {
             ),
           ),
           GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTripForm())),
+            onTap: () => context.push('/create-trip'),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
@@ -136,7 +135,7 @@ class _TabItem extends StatelessWidget {
             color: isActive ? AppColors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             boxShadow: isActive 
-              ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))]
               : null,
           ),
           child: Text(
@@ -178,7 +177,7 @@ class _MyTripCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.gray100),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -189,7 +188,7 @@ class _MyTripCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [color.withOpacity(0.9), color.withOpacity(0.6)],
+                colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.6)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -208,7 +207,7 @@ class _MyTripCard extends StatelessWidget {
                     ),
                     Text(
                       startDate,
-                      style: TextStyle(fontSize: 11, color: AppColors.white.withOpacity(0.8)),
+                      style: TextStyle(fontSize: 11, color: AppColors.white.withValues(alpha: 0.8)),
                     ),
                   ],
                 ),
@@ -245,7 +244,7 @@ class _MyTripCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ItineraryView(trip: trip))),
+                        onTap: () => context.push('/itinerary', extra: trip),
                         child: const _BtnSm(label: '👁️ View', isPrimary: true),
                       ),
                     ),

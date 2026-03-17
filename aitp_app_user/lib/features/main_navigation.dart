@@ -8,14 +8,21 @@ import 'chat/chat_view.dart';
 import 'profile/profile_view.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  final int initialIndex;
+  const MainNavigation({super.key, this.initialIndex = 0});
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  State<MainNavigation> createState() => MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 0;
+class MainNavigationState extends State<MainNavigation> {
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   final List<Widget> _pages = [
     const HomeView(),
@@ -24,6 +31,10 @@ class _MainNavigationState extends State<MainNavigation> {
     const ChatView(),
     const ProfileView(),
   ];
+
+  void switchTab(int index) {
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +55,7 @@ class _MainNavigationState extends State<MainNavigation> {
           color: AppColors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 20,
               offset: const Offset(0, -4),
             ),
@@ -85,7 +96,7 @@ class _MainNavigationState extends State<MainNavigation> {
               style: TextStyle(
                 fontSize: 22,
                 shadows: isActive 
-                  ? [Shadow(color: AppColors.g500.withOpacity(0.5), blurRadius: 4)]
+                  ? [Shadow(color: AppColors.g500.withValues(alpha: 0.5), blurRadius: 4)]
                   : null,
               ),
             ),
@@ -114,4 +125,3 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 }
-

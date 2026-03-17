@@ -18,6 +18,10 @@ class _AnalyticsViewState extends ConsumerState<AnalyticsView> with SingleTicker
   void initState() {
     super.initState();
     _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(dashboardProvider).refresh();
+    });
   }
 
   @override
@@ -242,9 +246,9 @@ class _AnalyticsViewState extends ConsumerState<AnalyticsView> with SingleTicker
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(s.$3 * 0.15),
+                color: AppColors.primary.withValues(alpha: s.$3 * 0.15),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

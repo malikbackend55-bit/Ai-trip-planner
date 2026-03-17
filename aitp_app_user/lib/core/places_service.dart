@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 class PlacesService {
   final Dio _dio = Dio();
@@ -23,11 +24,12 @@ class PlacesService {
         return predictions.map((p) => p['description'] as String).toList();
       } else {
         // Handle API errors like invalid key (REQUEST_DENIED, etc.)
-        print('Places API Error: ${response.data['status']}');
+        debugPrint('Places API Error: ${response.data['status']}');
         return [];
       }
+
     } catch (e) {
-      print('Error fetching places: $e');
+      debugPrint('Error fetching places: $e');
       return [];
     }
   }

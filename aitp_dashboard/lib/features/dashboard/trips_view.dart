@@ -3,11 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/dashboard_provider.dart';
 import '../../core/theme.dart';
 
-class TripsView extends ConsumerWidget {
+class TripsView extends ConsumerStatefulWidget {
   const TripsView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TripsView> createState() => _TripsViewState();
+}
+
+class _TripsViewState extends ConsumerState<TripsView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(dashboardProvider).refresh();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final provider = ref.watch(dashboardProvider);
     
     return Column(
@@ -34,14 +47,14 @@ class TripsView extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 24),
-        _buildFilters(),
+        _buildFilters(provider),
         const SizedBox(height: 24),
-        _buildTripsTable(provider),
+        _buildTripsTable(context, ref, provider),
       ],
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(DashboardProvider provider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -51,33 +64,35 @@ class TripsView extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          _buildFilterChip('All Trips', true),
-          _buildFilterChip('Upcoming', false),
-          _buildFilterChip('Completed', false),
-          _buildFilterChip('Cancelled', false),
+          _buildFilterChip('All Trips', provider.tripFilter == 'All Trips', provider),
+          _buildFilterChip('Upcoming', provider.tripFilter == 'Upcoming', provider),
+          _buildFilterChip('Completed', provider.tripFilter == 'Completed', provider),
+          _buildFilterChip('Cancelled', provider.tripFilter == 'Cancelled', provider),
           const Spacer(),
-          const Text('Show:', style: TextStyle(fontSize: 12, color: AppColors.textDim)),
-          const SizedBox(width: 8),
-          DropdownButton<String>(
-            value: '10',
-            underline: const SizedBox(),
-            items: ['10', '20', '50'].map((String value) {
-              return DropdownMenuItem<String>(value: value, child: Text(value, style: const TextStyle(fontSize: 12)));
-            }).toList(),
-            onChanged: (_) {},
+          SizedBox(
+            width: 200,
+            child: TextField(
+              onChanged: (value) => ref.read(dashboardProvider).setTripSearchQuery(value),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textDim),
+                hintText: 'Search trips...',
+                border: InputBorder.none,
+                hintStyle: TextStyle(fontSize: 12, color: AppColors.textDim),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, bool isSelected) {
+  Widget _buildFilterChip(String label, bool isSelected, DashboardProvider provider) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : AppColors.textDim)),
         selected: isSelected,
-        onSelected: (_) {},
+        onSelected: (_) => ref.read(dashboardProvider).setTripFilter(label),
         selectedColor: AppColors.primary,
         backgroundColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border)),
@@ -86,8 +101,8 @@ class TripsView extends ConsumerWidget {
     );
   }
 
-  Widget _buildTripsTable(DashboardProvider provider) {
-    final trips = provider.trips;
+  Widget _buildTripsTable(BuildContext context, WidgetRef ref, DashboardProvider provider) {
+    final trips = provider.filteredTrips;
 
     return Container(
       width: double.infinity,
@@ -101,29 +116,34 @@ class TripsView extends ConsumerWidget {
             padding: EdgeInsets.all(64.0),
             child: Center(child: CircularProgressIndicator()),
           )
-        : SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowHeight: 56,
-              dataRowMinHeight: 56,
-              dataRowMaxHeight: 64,
-              horizontalMargin: 24,
-              columnSpacing: 24,
-              headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain, fontSize: 13),
-              columns: const [
-                DataColumn(label: Text('Destination')),
-                DataColumn(label: Text('Travel Dates')),
-                DataColumn(label: Text('Budget')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Actions')),
-              ],
-              rows: trips.map((t) => _buildTripRow(t)).toList(),
+        : trips.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.all(48.0),
+              child: Center(child: Text('No trips match your filters.', style: TextStyle(color: AppColors.textDim))),
+            )
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowHeight: 56,
+                dataRowMinHeight: 56,
+                dataRowMaxHeight: 64,
+                horizontalMargin: 24,
+                columnSpacing: 24,
+                headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain, fontSize: 13),
+                columns: const [
+                  DataColumn(label: Text('Destination')),
+                  DataColumn(label: Text('Travel Dates')),
+                  DataColumn(label: Text('Budget')),
+                  DataColumn(label: Text('Status')),
+                  DataColumn(label: Text('Actions')),
+                ],
+                rows: trips.map((t) => _buildTripRow(context, ref, t)).toList(),
+              ),
             ),
-          ),
     );
   }
 
-  DataRow _buildTripRow(dynamic trip) {
+  DataRow _buildTripRow(BuildContext context, WidgetRef ref, dynamic trip) {
     final destination = trip['destination'] ?? 'Unknown';
     final budget = '\$${(double.tryParse(trip['budget']?.toString() ?? '0') ?? 0).toStringAsFixed(0)}';
     final status = trip['status'] ?? 'Scheduled';
@@ -143,7 +163,37 @@ class TripsView extends ConsumerWidget {
         DataCell(Row(
           children: [
             IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDim), onPressed: () {}),
-            IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent), onPressed: () {}),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Delete Trip'),
+                    content: Text('Are you sure you want to delete this trip to $destination?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  final id = trip['id'];
+                  if (id != null) {
+                    final success = await ref.read(dashboardProvider).deleteTrip(id);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(success ? 'Trip deleted' : 'Failed to delete trip')),
+                      );
+                    }
+                  }
+                }
+              },
+            ),
           ],
         )),
       ],
@@ -163,9 +213,9 @@ class TripsView extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         status,

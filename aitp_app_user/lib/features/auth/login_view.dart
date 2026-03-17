@@ -63,7 +63,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
               width: 200,
               height: 200,
               decoration: BoxDecoration(
-                color: AppColors.g200.withOpacity(0.3),
+                color: AppColors.g200.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
             ),
@@ -84,7 +84,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
             gradient: const LinearGradient(colors: [AppColors.g600, AppColors.g800]),
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
-              BoxShadow(color: AppColors.g600.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+              BoxShadow(color: AppColors.g600.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8)),
             ],
           ),
           child: const Center(child: Text('🌍', style: TextStyle(fontSize: 32))),

@@ -71,4 +71,16 @@ class ApiService {
   Future<Response> getUser() async {
     return dio.get('/user');
   }
+
+  Future<Response> logout() async {
+    return dio.post('/logout');
+  }
+
+  Future<Response> deleteTrip(int id) async {
+    return dio.delete('/trips/$id');
+  }
+
+  Future<Response> getDestinations() async {
+    return dio.get('/admin/stats');
+  }
 }

@@ -50,4 +50,42 @@ class AdminController extends Controller
             'conversionRate' => '4.2%',
         ]);
     }
+
+    public function trips()
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $trips = Trip::with('user')->orderBy('created_at', 'desc')->get();
+        return response()->json($trips);
+    }
+
+    public function deleteUser($id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $user = User::findOrFail($id);
+        
+        // Prevent deleting oneself
+        if ($user->id === auth()->id()) {
+            return response()->json(['message' => 'Cannot delete your own account'], 400);
+        }
+
+        $user->delete();
+        return response()->json(['message' => 'User deleted successfully']);
+    }
+
+    public function deleteTrip($id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $trip = Trip::findOrFail($id);
+        $trip->delete();
+        return response()->json(['message' => 'Trip deleted successfully']);
+    }
 }

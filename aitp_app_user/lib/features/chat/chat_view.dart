@@ -93,7 +93,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [AppColors.g400, AppColors.g600]),
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.white.withOpacity(0.3), width: 2),
+              border: Border.all(color: AppColors.white.withValues(alpha: 0.3), width: 2),
             ),
             child: const Center(child: Text('🤖', style: TextStyle(fontSize: 20))),
           ),
@@ -208,7 +208,7 @@ class _ChatBubble extends StatelessWidget {
                 bottomLeft: Radius.circular(isAi ? 4 : 16),
                 bottomRight: Radius.circular(isAi ? 16 : 4),
               ),
-              boxShadow: isAi ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : null,
+              boxShadow: isAi ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))] : null,
             ),
             child: Text(
               text,

@@ -7,12 +7,144 @@ class DashboardProvider extends ChangeNotifier {
   Map<String, dynamic> _stats = {};
   List<dynamic> _users = [];
   List<dynamic> _trips = [];
+  Map<String, dynamic> _adminProfile = {};
   bool _isLoading = false;
+
+  // Filter / search state
+  String _tripFilter = 'All Trips';
+  String _userFilter = 'All';
+  String _catalogFilter = 'All';
+  String _tripSearchQuery = '';
+  String _userSearchQuery = '';
+  String _catalogSearchQuery = '';
 
   Map<String, dynamic> get stats => _stats;
   List<dynamic> get users => _users;
   List<dynamic> get trips => _trips;
+  Map<String, dynamic> get adminProfile => _adminProfile;
   bool get isLoading => _isLoading;
+
+  String get tripFilter => _tripFilter;
+  String get userFilter => _userFilter;
+  String get catalogFilter => _catalogFilter;
+  String get tripSearchQuery => _tripSearchQuery;
+  String get userSearchQuery => _userSearchQuery;
+  String get catalogSearchQuery => _catalogSearchQuery;
+
+  // Filtered getters
+  List<dynamic> get filteredTrips {
+    var result = _trips;
+
+    // Apply status filter
+    if (_tripFilter != 'All Trips') {
+      result = result.where((t) {
+        final status = (t['status'] ?? '').toString();
+        switch (_tripFilter) {
+          case 'Upcoming':
+            return status == 'Scheduled' || status == 'In Progress';
+          case 'Completed':
+            return status == 'Completed';
+          case 'Cancelled':
+            return status == 'Cancelled';
+          default:
+            return true;
+        }
+      }).toList();
+    }
+
+    // Apply search
+    if (_tripSearchQuery.isNotEmpty) {
+      final q = _tripSearchQuery.toLowerCase();
+      result = result.where((t) =>
+          (t['destination'] ?? '').toString().toLowerCase().contains(q))
+          .toList();
+    }
+    return result;
+  }
+
+  List<dynamic> get filteredUsers {
+    var result = _users;
+
+    // Apply role filter
+    if (_userFilter != 'All') {
+      result = result.where((u) {
+        final role = (u['role'] ?? 'user').toString().toLowerCase();
+        return role == _userFilter.toLowerCase();
+      }).toList();
+    }
+
+    // Apply search
+    if (_userSearchQuery.isNotEmpty) {
+      final q = _userSearchQuery.toLowerCase();
+      result = result.where((u) =>
+          (u['name'] ?? '').toString().toLowerCase().contains(q) ||
+          (u['email'] ?? '').toString().toLowerCase().contains(q))
+          .toList();
+    }
+    return result;
+  }
+
+  List<dynamic> get filteredCatalog {
+    var result = _trips; // Catalog uses trips as source
+
+    // Apply filter
+    if (_catalogFilter == 'Featured') {
+      result = result.where((t) =>
+          (double.tryParse(t['budget']?.toString() ?? '0') ?? 0) >= 2000).toList();
+    } else if (_catalogFilter == 'Hidden') {
+      result = result.where((t) =>
+          (t['status'] ?? '').toString() == 'Cancelled').toList();
+    }
+
+    // Apply search
+    if (_catalogSearchQuery.isNotEmpty) {
+      final q = _catalogSearchQuery.toLowerCase();
+      result = result.where((t) =>
+          (t['destination'] ?? '').toString().toLowerCase().contains(q))
+          .toList();
+    }
+    return result;
+  }
+
+  // Computed user stats
+  int get premiumUserCount => _users.where((u) =>
+      (u['role'] ?? '').toString().toLowerCase() == 'premium').length;
+
+  int get adminUserCount => _users.where((u) =>
+      (u['role'] ?? '').toString().toLowerCase() == 'admin').length;
+
+  int get activeUserCount => _users.length; // All users count as active for now
+
+  // Filter setters
+  void setTripFilter(String filter) {
+    _tripFilter = filter;
+    notifyListeners();
+  }
+
+  void setUserFilter(String filter) {
+    _userFilter = filter;
+    notifyListeners();
+  }
+
+  void setCatalogFilter(String filter) {
+    _catalogFilter = filter;
+    notifyListeners();
+  }
+
+  void setTripSearchQuery(String query) {
+    _tripSearchQuery = query;
+    notifyListeners();
+  }
+
+  void setUserSearchQuery(String query) {
+    _userSearchQuery = query;
+    notifyListeners();
+  }
+
+  void setCatalogSearchQuery(String query) {
+    _catalogSearchQuery = query;
+    notifyListeners();
+  }
 
   Future<void> refresh() async {
     _isLoading = true;
@@ -25,12 +157,39 @@ class DashboardProvider extends ChangeNotifier {
       _stats = statsRes.data;
       _users = usersRes.data;
       _trips = tripsRes.data;
+
+      try {
+        final profileRes = await _apiService.getAdminProfile();
+        _adminProfile = profileRes.data is Map<String, dynamic> ? profileRes.data : {};
+      } catch (_) {
+        // Profile fetch failed, keep existing
+      }
       
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> deleteUser(int id) async {
+    try {
+      await _apiService.deleteUser(id);
+      await refresh();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteTrip(int id) async {
+    try {
+      await _apiService.deleteTrip(id);
+      await refresh();
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 }

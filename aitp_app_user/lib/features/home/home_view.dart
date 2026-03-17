@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/auth_provider.dart';
 import '../../core/trip_provider.dart';
 import '../../core/theme.dart';
-import '../trips/create_trip_form.dart';
-import '../itinerary/itinerary_view.dart';
+import '../main_navigation.dart';
 
 class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
@@ -27,6 +27,13 @@ class _HomeViewState extends ConsumerState<HomeView> {
     });
   }
 
+  void _switchTab(int index) {
+    final navState = context.findAncestorStateOfType<MainNavigationState>();
+    if (navState != null) {
+      navState.switchTab(index);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final trips = ref.watch(tripProvider);
@@ -44,13 +51,13 @@ class _HomeViewState extends ConsumerState<HomeView> {
                   children: [
                      _buildAnimatedSection(0.1, _buildQuickActions(context)),
                     const SizedBox(height: 24),
-                    _buildAnimatedSection(0.2, _buildSectionHeader('Your Trips', 'See all →')),
+                    _buildAnimatedSection(0.2, _buildSectionHeader('Your Trips', 'See all →', onTap: () => _switchTab(2))),
                     const SizedBox(height: 12),
                     _buildAnimatedSection(0.3, _buildTripSection(trips)),
                     const SizedBox(height: 24),
-                    _buildAnimatedSection(0.4, _buildSectionHeader('Suggested for You', 'More →')),
+                    _buildAnimatedSection(0.4, _buildSectionHeader('Suggested for You', 'More →', onTap: () => _switchTab(1))),
                     const SizedBox(height: 12),
-                    _buildAnimatedSection(0.5, _buildSuggestedDestinations()),
+                    _buildAnimatedSection(0.5, _buildSuggestedDestinations(trips)),
                     const SizedBox(height: 80), // Space for bottom nav
                   ],
                 ),
@@ -95,7 +102,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
             ),
              const SizedBox(height: 16),
              TextButton(
-               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTripForm())),
+               onPressed: () => context.push('/create-trip'),
                child: const Text('Create Trip'),
              ),
            ],
@@ -146,25 +153,28 @@ class _HomeViewState extends ConsumerState<HomeView> {
             ),
           ),
           const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.white.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search, color: AppColors.white, size: 20),
-                const SizedBox(width: 10),
-                Text(
-                  'Where do you want to go?',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.white.withOpacity(0.7),
+          GestureDetector(
+            onTap: () => _switchTab(1),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.white.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search, color: AppColors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Where do you want to go?',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.white.withValues(alpha: 0.7),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -177,17 +187,26 @@ class _HomeViewState extends ConsumerState<HomeView> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         GestureDetector(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTripForm())),
+          onTap: () => context.push('/create-trip'),
           child: const _QuickAction(icon: '✈️', label: 'New Trip'),
         ),
-        const _QuickAction(icon: '🗺️', label: 'Explore'),
-        const _QuickAction(icon: '🤖', label: 'AI Chat'),
-        const _QuickAction(icon: '📅', label: 'My Trips'),
+        GestureDetector(
+          onTap: () => _switchTab(1),
+          child: const _QuickAction(icon: '🗺️', label: 'Explore'),
+        ),
+        GestureDetector(
+          onTap: () => _switchTab(3),
+          child: const _QuickAction(icon: '🤖', label: 'AI Chat'),
+        ),
+        GestureDetector(
+          onTap: () => _switchTab(2),
+          child: const _QuickAction(icon: '📅', label: 'My Trips'),
+        ),
       ],
     );
   }
 
-  Widget _buildSectionHeader(String title, String action) {
+  Widget _buildSectionHeader(String title, String action, {VoidCallback? onTap}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -199,31 +218,65 @@ class _HomeViewState extends ConsumerState<HomeView> {
             color: AppColors.gray800,
           ),
         ),
-        Text(
-          action,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.g600,
-            fontWeight: FontWeight.w700,
+        GestureDetector(
+          onTap: onTap,
+          child: Text(
+            action,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.g600,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSuggestedDestinations() {
+  Widget _buildSuggestedDestinations(TripProvider provider) {
+    // Try to derive suggestions from user's trips, fallback to defaults
+    final trips = provider.trips;
+    final Set<String> tripDests = {};
+    for (var trip in trips) {
+      if (trip['destination'] != null) {
+        tripDests.add(trip['destination'].toString());
+      }
+    }
+
+    // Curated list, but mark user's destinations
+    final suggestions = [
+      _DestData(name: 'Tokyo', price: 'from \$2,800', emoji: '🗼', color: Colors.amber),
+      _DestData(name: 'Bali', price: 'from \$1,200', emoji: '🌴', color: Colors.teal),
+      _DestData(name: 'New York', price: 'from \$3,800', emoji: '🗽', color: Colors.blue),
+      _DestData(name: 'Paris', price: 'from \$2,500', emoji: '🗼', color: Colors.orange),
+      _DestData(name: 'London', price: 'from \$2,900', emoji: '💂', color: Colors.indigo),
+    ];
+
+    // Filter out destinations user already has trips to
+    final filtered = suggestions.where((s) => 
+      !tripDests.any((d) => d.toLowerCase().contains(s.name.toLowerCase()))
+    ).toList();
+
+    final display = filtered.isEmpty ? suggestions : filtered;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: [
-          _DestCard(name: 'Tokyo', price: 'from \$2,800', emoji: '🗼', color: Colors.amber),
-          _DestCard(name: 'Bali', price: 'from \$1,200', emoji: '🌴', color: Colors.teal),
-          _DestCard(name: 'New York', price: 'from \$3,800', emoji: '🗽', color: Colors.blue),
-        ],
+        children: display.take(4).map((d) => _DestCard(
+          name: d.name, price: d.price, emoji: d.emoji, color: d.color,
+        )).toList(),
       ),
     );
   }
 }
+
+// Helper data class for suggestions
+class _DestData {
+  final String name, price, emoji;
+  final Color color;
+  const _DestData({required this.name, required this.price, required this.emoji, required this.color});
+}
+
 
 class _QuickAction extends StatelessWidget {
   final String icon;
@@ -240,7 +293,7 @@ class _QuickAction extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -281,10 +334,7 @@ class _TripCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => ItineraryView(trip: trip)),
-            );
+            context.push('/itinerary', extra: trip);
           },
           borderRadius: BorderRadius.circular(24),
           child: Container(
@@ -293,7 +343,7 @@ class _TripCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -337,9 +387,9 @@ class _TripCard extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
+                                const Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: const [
+                                  children: [
                                     Text('Estimated Budget', style: TextStyle(fontSize: 10, color: AppColors.gray400)),
                                   ],
                                 ),
@@ -389,7 +439,7 @@ class _DestCard extends StatelessWidget {
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -398,7 +448,7 @@ class _DestCard extends StatelessWidget {
           Container(
             height: 75,
             width: double.infinity,
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             child: Center(child: Text(emoji, style: const TextStyle(fontSize: 32))),
           ),
           Padding(

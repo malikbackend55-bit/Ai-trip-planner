@@ -53,7 +53,7 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
           const SizedBox(height: 24),
           _buildUserStatsRow(provider),
           const SizedBox(height: 24),
-          _buildSearchBar(),
+          _buildSearchBar(provider),
           const SizedBox(height: 16),
           _buildUsersTable(provider),
         ],
@@ -62,18 +62,20 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
   }
 
   Widget _buildUserStatsRow(DashboardProvider provider) {
-    final stats = provider.stats;
-    final totalUsers = stats['totalUsers']?.toString() ?? '0';
+    final totalUsers = provider.users.length.toString();
+    final premiumCount = provider.premiumUserCount.toString();
+    final activeCount = provider.activeUserCount.toString();
+    final adminCount = provider.adminUserCount.toString();
 
     return Row(
       children: [
         _buildMiniStat('Total Users', totalUsers, Icons.people, AppColors.primary),
         const SizedBox(width: 16),
-        _buildMiniStat('Premium', '1,245', Icons.star, AppColors.accent),
+        _buildMiniStat('Premium', premiumCount, Icons.star, AppColors.accent),
         const SizedBox(width: 16),
-        _buildMiniStat('Active Today', '3,120', Icons.trending_up, AppColors.success),
+        _buildMiniStat('Active', activeCount, Icons.trending_up, AppColors.success),
         const SizedBox(width: 16),
-        _buildMiniStat('Banned', '47', Icons.block, AppColors.error),
+        _buildMiniStat('Admins', adminCount, Icons.admin_panel_settings, AppColors.error),
       ],
     );
   }
@@ -91,7 +93,7 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(width: 14),
@@ -108,7 +110,7 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(DashboardProvider provider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -118,9 +120,10 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
       ),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: TextField(
-              decoration: InputDecoration(
+              onChanged: (value) => ref.read(dashboardProvider).setUserSearchQuery(value),
+              decoration: const InputDecoration(
                 icon: Icon(Icons.search, color: AppColors.textDim, size: 20),
                 hintText: 'Search users by name or email...',
                 border: InputBorder.none,
@@ -129,10 +132,10 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
             ),
           ),
           const SizedBox(width: 16),
-          _buildRoleChip('All', true),
-          _buildRoleChip('Admin', false),
-          _buildRoleChip('Premium', false),
-          _buildRoleChip('Standard', false),
+          _buildRoleChip('All', provider.userFilter == 'All'),
+          _buildRoleChip('Admin', provider.userFilter == 'Admin'),
+          _buildRoleChip('Premium', provider.userFilter == 'Premium'),
+          _buildRoleChip('User', provider.userFilter == 'User'),
         ],
       ),
     );
@@ -144,7 +147,7 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
       child: ChoiceChip(
         label: Text(label, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : AppColors.textDim)),
         selected: isSelected,
-        onSelected: (_) {},
+        onSelected: (_) => ref.read(dashboardProvider).setUserFilter(label),
         selectedColor: AppColors.primary,
         backgroundColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border)),
@@ -154,7 +157,7 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
   }
 
   Widget _buildUsersTable(DashboardProvider provider) {
-    final users = provider.users;
+    final users = provider.filteredUsers;
     
     return Container(
       width: double.infinity,
@@ -168,25 +171,30 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
             padding: EdgeInsets.all(64.0),
             child: Center(child: CircularProgressIndicator()),
           )
-        : SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowHeight: 56,
-              dataRowMinHeight: 56,
-              dataRowMaxHeight: 64,
-              horizontalMargin: 24,
-              columnSpacing: 20,
-              headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain, fontSize: 13),
-              columns: const [
-                DataColumn(label: Text('User')),
-                DataColumn(label: Text('Email')),
-                DataColumn(label: Text('Role')),
-                DataColumn(label: Text('Joined')),
-                DataColumn(label: Text('Actions')),
-              ],
-              rows: users.map((u) => _buildUserRow(u)).toList(),
+        : users.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.all(48.0),
+              child: Center(child: Text('No users match your filters.', style: TextStyle(color: AppColors.textDim))),
+            )
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowHeight: 56,
+                dataRowMinHeight: 56,
+                dataRowMaxHeight: 64,
+                horizontalMargin: 24,
+                columnSpacing: 20,
+                headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain, fontSize: 13),
+                columns: const [
+                  DataColumn(label: Text('User')),
+                  DataColumn(label: Text('Email')),
+                  DataColumn(label: Text('Role')),
+                  DataColumn(label: Text('Joined')),
+                  DataColumn(label: Text('Actions')),
+                ],
+                rows: users.map((u) => _buildUserRow(u)).toList(),
+              ),
             ),
-          ),
     );
   }
 
@@ -198,7 +206,7 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
 
     return DataRow(cells: [
       DataCell(Row(children: [
-        CircleAvatar(radius: 14, backgroundColor: AppColors.primary.withOpacity(0.15), child: Text(name[0], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary))),
+        CircleAvatar(radius: 14, backgroundColor: AppColors.primary.withValues(alpha: 0.15), child: Text(name[0], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary))),
         const SizedBox(width: 10),
         Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
       ])),
@@ -207,7 +215,37 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
       DataCell(Text(joined, style: const TextStyle(fontSize: 12, color: AppColors.textDim))),
       DataCell(Row(children: [
         IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDim), onPressed: () {}),
-        IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent), onPressed: () {}),
+        IconButton(
+          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+          onPressed: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Delete User'),
+                content: Text('Are you sure you want to delete $name?'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            );
+            if (confirm == true) {
+              final id = user['id'];
+              if (id != null) {
+                final success = await ref.read(dashboardProvider).deleteUser(id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(success ? 'User deleted' : 'Failed to delete user')),
+                  );
+                }
+              }
+            }
+          },
+        ),
       ])),
     ]);
   }
@@ -215,29 +253,14 @@ class _UsersViewState extends ConsumerState<UsersView> with SingleTickerProvider
   Widget _buildRoleBadge(String role) {
     Color color;
     switch (role) {
-      case 'Admin': color = AppColors.error; break;
-      case 'Premium': color = AppColors.accent; break;
+      case 'ADMIN': color = AppColors.error; break;
+      case 'PREMIUM': color = AppColors.accent; break;
       default: color = AppColors.textDim;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withOpacity(0.3))),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withValues(alpha: 0.3))),
       child: Text(role, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
     );
-  }
-
-  Widget _buildStatusDot(String status) {
-    Color color;
-    switch (status) {
-      case 'Active': color = AppColors.success; break;
-      case 'Inactive': color = AppColors.warning; break;
-      case 'Banned': color = AppColors.error; break;
-      default: color = AppColors.textDim;
-    }
-    return Row(children: [
-      Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-      const SizedBox(width: 6),
-      Text(status, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
-    ]);
   }
 }

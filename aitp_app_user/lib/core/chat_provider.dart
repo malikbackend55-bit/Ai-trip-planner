@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import 'api_service.dart';
 
 class ChatMessage {
@@ -33,9 +32,6 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     state = [...state]; 
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-
       // The ApiService handles the Authorization header automatically via its interceptor,
       // but we explicitly pass it here for safety or we can rely on the interceptor.
       // Let's rely on the ApiService's dio instance.
@@ -52,7 +48,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
         throw Exception('Failed to get response');
       }
     } catch (e) {
-      print('Error sending message: $e');
+      debugPrint('Error sending message: $e');
       isTyping = false;
       state = [
         ...state, 

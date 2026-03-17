@@ -1,37 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme.dart';
+import '../../core/explore_provider.dart';
 
-class ExploreView extends StatelessWidget {
+class ExploreView extends ConsumerStatefulWidget {
   const ExploreView({super.key});
 
   @override
+  ConsumerState<ExploreView> createState() => _ExploreViewState();
+}
+
+class _ExploreViewState extends ConsumerState<ExploreView> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final provider = ref.watch(exploreProvider);
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: Column(
         children: [
-          _buildHeader(),
-          _buildFilterChips(),
+          _buildHeader(provider),
+          _buildFilterChips(provider),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              children: [
-                _ExploreCard(name: 'Paris, France', sub: 'City of Light · Europe', price: '\$2,500', emoji: '🗼', rating: '4.9', color: Colors.amber),
-                _ExploreCard(name: 'Tokyo, Japan', sub: 'Modern Meets Ancient · Asia', price: '\$2,800', emoji: '⛩️', rating: '4.8', color: Colors.orange),
-                _ExploreCard(name: 'Bali, Indonesia', sub: 'Island Paradise · Asia', price: '\$1,100', emoji: '🌴', rating: '4.7', color: Colors.teal),
-                _ExploreCard(name: 'New York, USA', sub: 'The Big Apple · Americas', price: '\$3,800', emoji: '🗽', rating: '4.8', color: Colors.blue),
-                const SizedBox(height: 80),
-              ].animate(interval: 100.ms).fade(duration: 400.ms).slideY(begin: 0.1, duration: 400.ms, curve: Curves.easeOutQuart),
-            ),
+            child: provider.isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.g600))
+                : provider.destinations.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('🔍', style: TextStyle(fontSize: 48)),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No destinations found',
+                              style: TextStyle(color: AppColors.gray400, fontSize: 14),
+                            ),
+                            if (provider.searchQuery.isNotEmpty || provider.activeFilter != 'All')
+                              TextButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  ref.read(exploreProvider).setSearchQuery('');
+                                  ref.read(exploreProvider).setFilter('All');
+                                },
+                                child: const Text('Clear filters'),
+                              ),
+                          ],
+                        ),
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        children: [
+                          ...provider.destinations.map((d) => _ExploreCard(
+                            name: d.name,
+                            sub: d.subtitle,
+                            price: d.price,
+                            emoji: d.emoji,
+                            rating: d.rating,
+                            color: d.color,
+                          )),
+                          const SizedBox(height: 80),
+                        ].animate(interval: 100.ms).fade(duration: 400.ms).slideY(begin: 0.1, duration: 400.ms, curve: Curves.easeOutQuart),
+                      ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ExploreProvider provider) {
     return Container(
       padding: const EdgeInsets.only(top: 60, left: 16, right: 16, bottom: 10),
       child: Column(
@@ -48,26 +94,34 @@ class ExploreView extends StatelessWidget {
                   color: AppColors.gray800,
                 ),
               ),
-              const Icon(Icons.tune, color: AppColors.gray600),
+              GestureDetector(
+                onTap: () {
+                  // Refresh destinations
+                  ref.read(exploreProvider).fetchDestinations();
+                },
+                child: const Icon(Icons.refresh, color: AppColors.gray600),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               color: AppColors.gray50,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.gray200),
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.search, color: AppColors.gray400, size: 20),
-                const SizedBox(width: 10),
-                Text(
-                  'Search destinations...',
-                  style: TextStyle(fontSize: 13, color: AppColors.gray400),
-                ),
-              ],
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                ref.read(exploreProvider).setSearchQuery(value);
+              },
+              decoration: const InputDecoration(
+                icon: Icon(Icons.search, color: AppColors.gray400, size: 20),
+                hintText: 'Search destinations...',
+                border: InputBorder.none,
+                hintStyle: TextStyle(fontSize: 13, color: AppColors.gray400),
+              ),
             ),
           ),
         ],
@@ -75,21 +129,23 @@ class ExploreView extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(ExploreProvider provider) {
+    final filters = ['All', '🏖️ Beach', '🏙️ City', '⛰️ Nature', '💰 Budget', '✨ Luxury'];
+    final filterKeys = ['All', 'Beach', 'City', 'Nature', 'Budget', 'Luxury'];
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        children: [
-          _Chip(label: 'All', isActive: true),
-          _Chip(label: '🏖️ Beach'),
-          _Chip(label: '🏙️ City'),
-          _Chip(label: '⛰️ Nature'),
-          _Chip(label: '💰 Budget'),
-          _Chip(label: '✨ Luxury'),
-        ].animate(interval: 50.ms).fade(duration: 300.ms).scale(begin: const Offset(0.8, 0.8), duration: 300.ms, curve: Curves.easeOutBack),
-      ),
-    ).animate().fade(duration: 400.ms, delay: 200.ms);
+        children: List.generate(filters.length, (i) {
+          final isActive = provider.activeFilter == filterKeys[i];
+          return GestureDetector(
+            onTap: () => ref.read(exploreProvider).setFilter(filterKeys[i]),
+            child: _Chip(label: filters[i], isActive: isActive),
+          );
+        }),
+      ).animate().fade(duration: 400.ms, delay: 200.ms),
+    );
   }
 }
 
@@ -138,7 +194,7 @@ class _ExploreCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.gray100),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -147,7 +203,7 @@ class _ExploreCard extends StatelessWidget {
           Container(
             width: 90,
             height: 90,
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             child: Center(child: Text(emoji, style: const TextStyle(fontSize: 32))),
           ),
           Expanded(

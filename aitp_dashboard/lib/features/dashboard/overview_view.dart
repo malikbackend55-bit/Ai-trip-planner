@@ -173,7 +173,7 @@ class _OverviewViewState extends ConsumerState<OverviewView> with SingleTickerPr
                           barWidth: 4,
                           isStrokeCapRound: true,
                           dotData: const FlDotData(show: false),
-                          belowBarData: BarAreaData(show: true, color: AppColors.primary.withOpacity(0.1)),
+                          belowBarData: BarAreaData(show: true, color: AppColors.primary.withValues(alpha: 0.1)),
                         ),
                       ],
                     ),
