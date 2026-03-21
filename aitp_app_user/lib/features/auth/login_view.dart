@@ -145,7 +145,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
             const Text('Don\'t have an account?', style: TextStyle(color: AppColors.gray400, fontSize: 13)),
             TextButton(
               onPressed: () {
-                context.go('/register');
+                context.push('/register');
               },
               child: const Text('Sign Up', style: TextStyle(color: AppColors.g700, fontWeight: FontWeight.bold, fontSize: 13)),
             ),

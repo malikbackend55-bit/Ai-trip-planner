@@ -4,16 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\AiService;
+use App\Services\GeminiService;
 use Illuminate\Support\Facades\Auth;
 
 class ChatController extends Controller
 {
-    protected $aiService;
+    protected $geminiService;
 
-    public function __construct(AiService $aiService)
+    public function __construct(GeminiService $geminiService)
     {
-        $this->aiService = $aiService;
+        $this->geminiService = $geminiService;
     }
 
     public function sendMessage(Request $request)
@@ -28,7 +28,7 @@ class ChatController extends Controller
         $user = Auth::user();
 
         // Get the simulated AI response
-        $response = $this->aiService->generateChatResponse($message, $user, $context);
+        $response = $this->geminiService->generateChatResponse($message, $user, $context);
 
         return response()->json([
             'status' => 'success',

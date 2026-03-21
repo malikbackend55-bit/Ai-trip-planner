@@ -7,15 +7,15 @@ use App\Models\Trip;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-use App\Services\AiService;
+use App\Services\GeminiService;
 
 class TripController extends Controller
 {
-    protected $aiService;
+    protected $geminiService;
 
-    public function __construct(AiService $aiService)
+    public function __construct(GeminiService $geminiService)
     {
-        $this->aiService = $aiService;
+        $this->geminiService = $geminiService;
     }
     public function index()
     {
@@ -87,7 +87,7 @@ class TripController extends Controller
         ]);
 
         // Generate AI Itinerary
-        $itineraryData = $this->aiService->generateItinerary([
+        $itineraryData = $this->geminiService->generateItinerary([
             'destination' => $validated['destination'],
             'interests' => $validated['interests'],
             'days' => $days

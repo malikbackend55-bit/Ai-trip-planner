@@ -100,7 +100,7 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
           children: [
             const Text('Already have an account?', style: TextStyle(color: AppColors.gray400, fontSize: 13)),
             TextButton(
-              onPressed: () => context.pop(),
+              onPressed: () => context.go('/login'),
               child: const Text('Login', style: TextStyle(color: AppColors.g700, fontWeight: FontWeight.bold, fontSize: 13)),
             ),
           ],
